@@ -107,18 +107,54 @@
           "type": "Feature",
           "geometry": {
             "coordinates": [
-              [7.69528, 45.090512],
-              [7.69821, 45.089808],
-              [7.699101, 45.089589],
-              [7.698188, 45.088904],
-              [7.697909, 45.088749],
-              [7.697426, 45.088733],
-              [7.696595, 45.088991],
-              [7.696471, 45.089002],
-              [7.696176, 45.089112],
-              [7.695312, 45.089309],
-              [7.694754, 45.089471],
-              [7.695263, 45.090501]
+              [
+                7.69528,
+                45.090512
+              ],
+              [
+                7.69821,
+                45.089808
+              ],
+              [
+                7.699101,
+                45.089589
+              ],
+              [
+                7.698188,
+                45.088904
+              ],
+              [
+                7.697909,
+                45.088749
+              ],
+              [
+                7.697426,
+                45.088733
+              ],
+              [
+                7.696595,
+                45.088991
+              ],
+              [
+                7.696471,
+                45.089002
+              ],
+              [
+                7.696176,
+                45.089112
+              ],
+              [
+                7.695312,
+                45.089309
+              ],
+              [
+                7.694754,
+                45.089471
+              ],
+              [
+                7.695263,
+                45.090501
+              ]
             ],
             "type": "LineString"
           },
@@ -164,7 +200,7 @@
         ]
       },
       center: [7.6969, 45.0896],
-      zoom: 15,
+      zoom: 14,
       pitch: PITCH_2D
     });
 
@@ -306,15 +342,13 @@
     const courseUpCtrl = new CourseUpControl();
     map.addControl(courseUpCtrl, 'top-right');
 
-    // Se l'utente sposta o ruota manualmente la mappa, mette in pausa Course-Up
-    function pauseCourseUpOnUserInput() {
+    // Se l'utente sposta o ruota manualmente la mappa con le dita, mette in pausa Course-Up
+    map.on('dragstart', () => {
       if (!isProgrammaticMove && courseUpEnabled) {
         courseUpEnabled = false;
         courseUpCtrl.updateUI();
       }
-    }
-    map.on('dragstart', pauseCourseUpOnUserInput);
-    map.on('rotatestart', pauseCourseUpOnUserInput);
+    });
 
     // Crea il triangolino/freccia da navigatore
     const wrapperEl = document.createElement('div');
