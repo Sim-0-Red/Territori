@@ -45,6 +45,28 @@
       background: #0066ff;
       color: #ffffff;
     }
+
+    /* Pulsante per alternare vista 2D / 3D */
+    .view-mode-btn {
+      background: #ffffff;
+      border: none;
+      border-radius: 4px;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      padding: 6px 10px;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .view-mode-btn.is-3d {
+      background: #1e293b;
+      color: #ffffff;
+    }
   </style>
 </head>
 <body>
@@ -115,6 +137,15 @@
       ]
     };
 
+    // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
+    const PITCH_2D = 0;
+    const PITCH_3D = 60;
+    let is3DMode = false;
+
+    function getTargetPitch() {
+      return is3DMode ? PITCH_3D : PITCH_2D;
+    }
+
     const map = new maplibregl.Map({
       container: 'map',
       style: {
@@ -139,7 +170,7 @@
       },
       center: [7.743, 45.102],
       zoom: 14,
-      pitch: 0
+      pitch: PITCH_2D
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
@@ -149,6 +180,59 @@
     let navMarker = null;
     let lastHeading = 0;
     let lastCoords = null;
+
+    // Controllo per passare da 2D a 3D mantenendo lo stato Course-Up
+    class ViewModeControl {
+      onAdd(map) {
+        this._map = map;
+        this._container = document.createElement('div');
+        this._container.className = 'maplibregl-ctrl';
+
+        this._btn = document.createElement('button');
+        this._btn.type = 'button';
+        this._btn.className = 'view-mode-btn';
+        this._btn.textContent = '2D';
+        this._btn.title = 'Passa tra vista 2D e vista 3D';
+
+        this._btn.addEventListener('click', () => {
+          is3DMode = !is3DMode;
+          this.updateUI();
+
+          const cameraOptions = {
+            pitch: getTargetPitch(),
+            duration: 500
+          };
+
+          if (courseUpEnabled && lastCoords) {
+            cameraOptions.center = lastCoords;
+            cameraOptions.bearing = lastHeading;
+          }
+
+          map.easeTo(cameraOptions);
+        });
+
+        this._container.appendChild(this._btn);
+        return this._container;
+      }
+
+      updateUI() {
+        if (is3DMode) {
+          this._btn.textContent = '3D';
+          this._btn.classList.add('is-3d');
+        } else {
+          this._btn.textContent = '2D';
+          this._btn.classList.remove('is-3d');
+        }
+      }
+
+      onRemove() {
+        this._container.parentNode.removeChild(this._container);
+        this._map = undefined;
+      }
+    }
+
+    const viewModeCtrl = new ViewModeControl();
+    map.addControl(viewModeCtrl, 'top-right');
 
     // Controllo personalizzato per attivare/disattivare Course-Up
     class CourseUpControl {
@@ -168,18 +252,16 @@
           this.updateUI();
 
           if (courseUpEnabled && lastCoords) {
-            // Riallinea subito la mappa alla direzione attuale in 2D
             map.easeTo({
               center: lastCoords,
               bearing: lastHeading,
-              pitch: 0,
+              pitch: getTargetPitch(),
               duration: 500
             });
           } else if (!courseUpEnabled) {
-            // Ripristina Nord in alto e vista piatta 2D
             map.easeTo({
               bearing: 0,
-              pitch: 0,
+              pitch: getTargetPitch(),
               duration: 500
             });
           }
@@ -237,7 +319,7 @@
     });
     map.addControl(geolocate, 'top-right');
 
-    // Funzione centralizzata per aggiornare posizione e rotazione (Course-Up in 2D)
+    // Funzione centralizzata per aggiornare posizione e rotazione (Course-Up in 2D o 3D)
     function updateNavigationView(coords, heading) {
       lastCoords = coords;
 
@@ -259,12 +341,12 @@
         navMarker.setRotation(lastHeading);
       }
 
-      // Se Course-Up è attivo, ruota la mappa in 2D (pitch: 0) in modo che la direzione punti sempre in alto
+      // Se Course-Up è attivo, ruota la mappa mantenendo il pitch corrente (0 per 2D, 60 per 3D)
       if (courseUpEnabled) {
         map.easeTo({
           center: coords,
           bearing: lastHeading,
-          pitch: 0,
+          pitch: getTargetPitch(),
           duration: 300,
           easing: (t) => t
         });
@@ -275,6 +357,25 @@
       const { longitude, latitude, heading } = e.coords;
       updateNavigationView([longitude, latitude], heading);
     });
+
+    // Prima stima veloce tramite rete/cache in attesa che il GPS ad alta precisione agganci
+    function requestFastInitialPosition() {
+      if (!('geolocation' in navigator)) return;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (!lastCoords) {
+            const { longitude, latitude, heading } = pos.coords;
+            updateNavigationView([longitude, latitude], heading);
+          }
+        },
+        () => {},
+        {
+          enableHighAccuracy: false,
+          maximumAge: 60000,
+          timeout: 3000
+        }
+      );
+    }
 
     // Fallback bussola del dispositivo (utile quando si è fermi o si cammina piano e il GPS non dà heading)
     window.addEventListener('deviceorientationabsolute', (e) => {
@@ -314,7 +415,8 @@
       );
       map.fitBounds(bounds, { padding: 40 });
 
-      // Attiva automaticamente la geolocalizzazione all'avvio della mappa
+      // Chiede subito una stima rapida e avvia la geolocalizzazione continua
+      requestFastInitialPosition();
       geolocate.trigger();
     });
   </script>
