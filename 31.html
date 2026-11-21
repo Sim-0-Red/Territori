@@ -468,18 +468,4 @@
       if (coords.length > 0) {
         const bounds = coords.reduce(
           (b, coord) => b.extend(coord),
-          new maplibregl.LngLatBounds(coords[0], coords[0])
-        );
-        isProgrammaticMove = true;
-        map.fitBounds(bounds, { padding: 40 });
-        map.once('moveend', () => {
-          isProgrammaticMove = false;
-        });
-      }
-
-      requestFastInitialPosition();
-      geolocate.trigger();
-    });
-  </script>
-</body>
-</html>
+          new
