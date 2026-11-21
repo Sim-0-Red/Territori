@@ -3,11 +3,28 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mappa con Confini Blu e Posizione GPS</title>
+  <title>Mappa con Confini Blu e Navigatore</title>
   <link href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet" />
   <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
   <style>
     html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
+
+    .nav-marker-wrapper {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .nav-arrow {
+      width: 32px;
+      height: 32px;
+      transform-origin: center center;
+      transition: transform 0.15s linear;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+    }
   </style>
 </head>
 <body>
@@ -104,18 +121,58 @@
       zoom: 14
     });
 
-    // Controlli di zoom e bussola (Nord / rotazione)
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
 
-    // Controllo Geolocalizzazione (Pallino blu GPS + direzione/bussola)
+    // Crea il triangolino/freccia da navigatore
+    const wrapperEl = document.createElement('div');
+    wrapperEl.className = 'nav-marker-wrapper';
+
+    const arrowEl = document.createElement('div');
+    arrowEl.className = 'nav-arrow';
+    arrowEl.innerHTML = `
+      <svg viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="16,3 27,27 16,21 5,27" fill="#0066ff" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round" />
+      </svg>
+    `;
+    wrapperEl.appendChild(arrowEl);
+
+    let navMarker = null;
+    let lastHeading = 0;
+
+    // Nascondiamo il pallino standard così mostriamo solo il triangolino da navigatore
     const geolocate = new maplibregl.GeolocateControl({
       positionOptions: {
-        enableHighAccuracy: true // Usa il GPS ad alta precisione
+        enableHighAccuracy: true
       },
-      trackUserLocation: true,   // Mantiene il pallino attivo e segue gli spostamenti
-      showUserHeading: true      // Mostra la freccia di direzione (bussola/course) sul pallino
+      trackUserLocation: true,
+      showUserLocation: false,
+      showAccuracyCircle: false
     });
     map.addControl(geolocate, 'top-right');
+
+    geolocate.on('geolocate', (e) => {
+      const { longitude, latitude, heading } = e.coords;
+      const coords = [longitude, latitude];
+
+      if (!navMarker) {
+        navMarker = new maplibregl.Marker({
+          element: wrapperEl,
+          rotationAlignment: 'map',
+          pitchAlignment: 'map'
+        })
+          .setLngLat(coords)
+          .addTo(map);
+      } else {
+        navMarker.setLngLat(coords);
+      }
+
+      // Se il dispositivo fornisce heading (in gradi, 0 = Nord), ruota il triangolo
+      if (typeof heading === 'number' && !Number.isNaN(heading)) {
+        lastHeading = heading;
+      }
+
+      arrowEl.style.transform = `rotate(${lastHeading}deg)`;
+    });
 
     map.on('load', () => {
       map.addSource('confini', {
