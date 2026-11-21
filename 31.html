@@ -4,10 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mappa con Confini Blu e Navigatore Course-Up</title>
-  <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5/dist/maplibre-gl.js"></script>
   <style>
-    html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
+    html, body, #map {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #e5e7eb;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
 
     .nav-marker-wrapper {
       width: 36px;
@@ -24,15 +29,13 @@
       filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
     }
 
-    /* Pulsante per attivare/disattivare Course-Up */
     .course-up-btn {
       background: #ffffff;
       border: none;
       border-radius: 4px;
-      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12);
       cursor: pointer;
       padding: 6px 10px;
-      font-family: system-ui, -apple-system, sans-serif;
       font-size: 13px;
       font-weight: 600;
       color: #333;
@@ -46,15 +49,13 @@
       color: #ffffff;
     }
 
-    /* Pulsante per alternare vista 2D / 3D */
     .view-mode-btn {
       background: #ffffff;
       border: none;
       border-radius: 4px;
-      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12);
       cursor: pointer;
       padding: 6px 10px;
-      font-family: system-ui, -apple-system, sans-serif;
       font-size: 13px;
       font-weight: 700;
       color: #333;
@@ -91,13 +92,23 @@
 <body>
   <div id="map"></div>
   <div id="err-box"></div>
+
   <script>
-    window.addEventListener('error', (ev) => {
+    function showError(msg) {
       const box = document.getElementById('err-box');
       if (box) {
         box.style.display = 'block';
-        box.textContent += (box.textContent ? '\n' : '') + (ev.message || 'Errore');
+        box.textContent += (box.textContent ? '\n' : '') + msg;
       }
+      console.error(msg);
+    }
+
+    window.addEventListener('error', (ev) => {
+      showError(ev.message || 'Errore JavaScript');
+    });
+
+    window.addEventListener('unhandledrejection', (ev) => {
+      showError('Promise error: ' + (ev.reason && ev.reason.message ? ev.reason.message : ev.reason));
     });
 
     const mieiPoligoni = {
@@ -107,18 +118,54 @@
           "type": "Feature",
           "geometry": {
             "coordinates": [
-              [7.69528, 45.090512],
-              [7.69821, 45.089808],
-              [7.699101, 45.089589],
-              [7.698188, 45.088904],
-              [7.697909, 45.088749],
-              [7.697426, 45.088733],
-              [7.696595, 45.088991],
-              [7.696471, 45.089002],
-              [7.696176, 45.089112],
-              [7.695312, 45.089309],
-              [7.694754, 45.089471],
-              [7.695263, 45.090501]
+              [
+                7.69528,
+                45.090512
+              ],
+              [
+                7.69821,
+                45.089808
+              ],
+              [
+                7.699101,
+                45.089589
+              ],
+              [
+                7.698188,
+                45.088904
+              ],
+              [
+                7.697909,
+                45.088749
+              ],
+              [
+                7.697426,
+                45.088733
+              ],
+              [
+                7.696595,
+                45.088991
+              ],
+              [
+                7.696471,
+                45.089002
+              ],
+              [
+                7.696176,
+                45.089112
+              ],
+              [
+                7.695312,
+                45.089309
+              ],
+              [
+                7.694754,
+                45.089471
+              ],
+              [
+                7.695263,
+                45.090501
+              ]
             ],
             "type": "LineString"
           },
@@ -132,307 +179,373 @@
       ]
     };
 
-    const PITCH_2D = 0;
-    const PITCH_3D = 60;
-    let is3DMode = false;
-
-    function getTargetPitch() {
-      return is3DMode ? PITCH_3D : PITCH_2D;
-    }
-
-    const map = new maplibregl.Map({
-      container: 'map',
-      style: {
-        version: 8,
-        sources: {
-          esriStreet: {
-            type: 'raster',
-            tiles: [
-              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'
-            ],
-            tileSize: 256,
-            attribution: '© Esri, OpenStreetMap contributors'
-          }
-        },
-        layers: [
-          {
-            id: 'esri-street-layer',
-            type: 'raster',
-            source: 'esriStreet'
-          }
-        ]
-      },
-      center: [7.6969, 45.0896],
-      zoom: 14,
-      pitch: PITCH_2D
-    });
-
-    map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
-
-    let courseUpEnabled = false;
-    let navMarker = null;
-    let lastHeading = 0;
-    let lastCoords = null;
-    let isProgrammaticMove = false;
-
-    function moveCameraSafe(options) {
-      isProgrammaticMove = true;
-      map.easeTo(options);
-      map.once('moveend', () => {
-        isProgrammaticMove = false;
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.async = true;
+        s.onload = () => resolve(src);
+        s.onerror = () => reject(new Error('Impossibile caricare script: ' + src));
+        document.head.appendChild(s);
       });
     }
 
-    async function requestCompassPermissionIfNeeded() {
-      if (
-        typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission === 'function'
-      ) {
+    function loadCss(href) {
+      const l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = href;
+      document.head.appendChild(l);
+    }
+
+    async function loadMapLibre() {
+      const sources = [
+        {
+          css: 'https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css',
+          js: 'https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js'
+        },
+        {
+          css: 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
+          js: 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js'
+        }
+      ];
+
+      for (const src of sources) {
         try {
-          await DeviceOrientationEvent.requestPermission();
+          loadCss(src.css);
+          await loadScript(src.js);
+          if (window.maplibregl) return window.maplibregl;
         } catch (_) {}
       }
+      throw new Error('MapLibre GL non caricato da nessun CDN.');
     }
 
-    class ViewModeControl {
-      onAdd(map) {
-        this._map = map;
-        this._container = document.createElement('div');
-        this._container.className = 'maplibregl-ctrl';
+    loadMapLibre()
+      .then((maplibregl) => {
+        const PITCH_2D = 0;
+        const PITCH_3D = 60;
+        let is3DMode = false;
 
-        this._btn = document.createElement('button');
-        this._btn.type = 'button';
-        this._btn.className = 'view-mode-btn';
-        this._btn.textContent = '2D';
-        this._btn.title = 'Passa tra vista 2D e vista 3D';
+        function getTargetPitch() {
+          return is3DMode ? PITCH_3D : PITCH_2D;
+        }
 
-        this._btn.addEventListener('click', () => {
-          is3DMode = !is3DMode;
-          this.updateUI();
-
-          const cameraOptions = {
-            pitch: getTargetPitch(),
-            duration: 450
-          };
-
-          if (courseUpEnabled && lastCoords) {
-            cameraOptions.center = lastCoords;
-            cameraOptions.bearing = lastHeading;
-          }
-
-          moveCameraSafe(cameraOptions);
+        const map = new maplibregl.Map({
+          container: 'map',
+          style: {
+            version: 8,
+            sources: {
+              esriStreet: {
+                type: 'raster',
+                tiles: [
+                  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'
+                ],
+                tileSize: 256,
+                attribution: '© Esri, OpenStreetMap contributors'
+              },
+              osmFallback: {
+                type: 'raster',
+                tiles: [
+                  'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+                ],
+                tileSize: 256,
+                attribution: '© OpenStreetMap contributors'
+              }
+            },
+            layers: [
+              {
+                id: 'osm-fallback-layer',
+                type: 'raster',
+                source: 'osmFallback'
+              },
+              {
+                id: 'esri-street-layer',
+                type: 'raster',
+                source: 'esriStreet'
+              }
+            ]
+          },
+          center: [7.6969, 45.0896],
+          zoom: 15,
+          pitch: PITCH_2D
         });
 
-        this._container.appendChild(this._btn);
-        return this._container;
-      }
+        map.on('error', (e) => {
+          if (e && e.error && e.error.status >= 400) {
+            if (map.getLayer('esri-street-layer')) {
+              map.setLayoutProperty('esri-street-layer', 'visibility', 'none');
+            }
+          }
+        });
 
-      updateUI() {
-        if (is3DMode) {
-          this._btn.textContent = '3D';
-          this._btn.classList.add('is-3d');
-        } else {
-          this._btn.textContent = '2D';
-          this._btn.classList.remove('is-3d');
+        map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
+
+        let courseUpEnabled = false;
+        let navMarker = null;
+        let lastHeading = 0;
+        let lastCoords = null;
+        let isProgrammaticMove = false;
+
+        function moveCameraSafe(options) {
+          isProgrammaticMove = true;
+          map.easeTo(options);
+          map.once('moveend', () => {
+            isProgrammaticMove = false;
+          });
         }
-      }
 
-      onRemove() {
-        this._container.parentNode.removeChild(this._container);
-        this._map = undefined;
-      }
-    }
+        async function requestCompassPermissionIfNeeded() {
+          if (
+            typeof DeviceOrientationEvent !== 'undefined' &&
+            typeof DeviceOrientationEvent.requestPermission === 'function'
+          ) {
+            try {
+              await DeviceOrientationEvent.requestPermission();
+            } catch (_) {}
+          }
+        }
 
-    const viewModeCtrl = new ViewModeControl();
-    map.addControl(viewModeCtrl, 'top-right');
+        class ViewModeControl {
+          onAdd(map) {
+            this._map = map;
+            this._container = document.createElement('div');
+            this._container.className = 'maplibregl-ctrl';
 
-    class CourseUpControl {
-      onAdd(map) {
-        this._map = map;
-        this._container = document.createElement('div');
-        this._container.className = 'maplibregl-ctrl';
+            this._btn = document.createElement('button');
+            this._btn.type = 'button';
+            this._btn.className = 'view-mode-btn';
+            this._btn.textContent = '2D';
+            this._btn.title = 'Passa tra vista 2D e vista 3D';
 
-        this._btn = document.createElement('button');
-        this._btn.type = 'button';
-        this._btn.className = 'course-up-btn';
-        this._btn.innerHTML = '🧭 Course-Up';
-        this._btn.title = 'Attiva/Disattiva rotazione automatica mappa';
+            this._btn.addEventListener('click', () => {
+              is3DMode = !is3DMode;
+              this.updateUI();
 
-        this._btn.addEventListener('click', async () => {
-          courseUpEnabled = !courseUpEnabled;
-          this.updateUI();
-
-          if (courseUpEnabled) {
-            await requestCompassPermissionIfNeeded();
-            if (lastCoords) {
-              moveCameraSafe({
-                center: lastCoords,
-                bearing: lastHeading,
+              const cameraOptions = {
                 pitch: getTargetPitch(),
                 duration: 450
-              });
+              };
+
+              if (courseUpEnabled && lastCoords) {
+                cameraOptions.center = lastCoords;
+                cameraOptions.bearing = lastHeading;
+              }
+
+              moveCameraSafe(cameraOptions);
+            });
+
+            this._container.appendChild(this._btn);
+            return this._container;
+          }
+
+          updateUI() {
+            if (is3DMode) {
+              this._btn.textContent = '3D';
+              this._btn.classList.add('is-3d');
+            } else {
+              this._btn.textContent = '2D';
+              this._btn.classList.remove('is-3d');
             }
+          }
+
+          onRemove() {
+            this._container.parentNode.removeChild(this._container);
+            this._map = undefined;
+          }
+        }
+
+        map.addControl(new ViewModeControl(), 'top-right');
+
+        class CourseUpControl {
+          onAdd(map) {
+            this._map = map;
+            this._container = document.createElement('div');
+            this._container.className = 'maplibregl-ctrl';
+
+            this._btn = document.createElement('button');
+            this._btn.type = 'button';
+            this._btn.className = 'course-up-btn';
+            this._btn.innerHTML = '🧭 Course-Up';
+            this._btn.title = 'Attiva/Disattiva rotazione automatica mappa';
+
+            this._btn.addEventListener('click', async () => {
+              courseUpEnabled = !courseUpEnabled;
+              this.updateUI();
+
+              if (courseUpEnabled) {
+                await requestCompassPermissionIfNeeded();
+                if (lastCoords) {
+                  moveCameraSafe({
+                    center: lastCoords,
+                    bearing: lastHeading,
+                    pitch: getTargetPitch(),
+                    duration: 450
+                  });
+                }
+              } else {
+                moveCameraSafe({
+                  bearing: 0,
+                  pitch: getTargetPitch(),
+                  duration: 450
+                });
+              }
+            });
+
+            this._container.appendChild(this._btn);
+            return this._container;
+          }
+
+          updateUI() {
+            if (courseUpEnabled) {
+              this._btn.classList.add('active');
+            } else {
+              this._btn.classList.remove('active');
+            }
+          }
+
+          onRemove() {
+            this._container.parentNode.removeChild(this._container);
+            this._map = undefined;
+          }
+        }
+
+        const courseUpCtrl = new CourseUpControl();
+        map.addControl(courseUpCtrl, 'top-right');
+
+        map.on('dragstart', () => {
+          if (!isProgrammaticMove && courseUpEnabled) {
+            courseUpEnabled = false;
+            courseUpCtrl.updateUI();
+          }
+        });
+
+        const wrapperEl = document.createElement('div');
+        wrapperEl.className = 'nav-marker-wrapper';
+
+        const arrowEl = document.createElement('div');
+        arrowEl.className = 'nav-arrow';
+        arrowEl.innerHTML = `
+          <svg viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="16,3 27,27 16,21 5,27" fill="#0066ff" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round" />
+          </svg>
+        `;
+        wrapperEl.appendChild(arrowEl);
+
+        const geolocate = new maplibregl.GeolocateControl({
+          positionOptions: {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 5000
+          },
+          trackUserLocation: true,
+          showUserLocation: false,
+          showAccuracyCircle: false
+        });
+        map.addControl(geolocate, 'top-right');
+
+        function updateNavigationView(coords, heading) {
+          if (!Array.isArray(coords) || coords.length !== 2) return;
+          const [lon, lat] = coords;
+          if (typeof lon !== 'number' || typeof lat !== 'number' || Number.isNaN(lon) || Number.isNaN(lat)) return;
+
+          lastCoords = [lon, lat];
+
+          if (typeof heading === 'number' && !Number.isNaN(heading)) {
+            lastHeading = ((heading % 360) + 360) % 360;
+          }
+
+          if (!navMarker) {
+            navMarker = new maplibregl.Marker({
+              element: wrapperEl,
+              rotationAlignment: 'map',
+              pitchAlignment: 'map'
+            })
+              .setLngLat(lastCoords)
+              .setRotation(lastHeading)
+              .addTo(map);
           } else {
+            navMarker.setLngLat(lastCoords);
+            navMarker.setRotation(lastHeading);
+          }
+
+          if (courseUpEnabled) {
             moveCameraSafe({
-              bearing: 0,
+              center: lastCoords,
+              bearing: lastHeading,
               pitch: getTargetPitch(),
-              duration: 450
+              duration: 300,
+              easing: (t) => t
             });
           }
-        });
-
-        this._container.appendChild(this._btn);
-        return this._container;
-      }
-
-      updateUI() {
-        if (courseUpEnabled) {
-          this._btn.classList.add('active');
-        } else {
-          this._btn.classList.remove('active');
         }
-      }
 
-      onRemove() {
-        this._container.parentNode.removeChild(this._container);
-        this._map = undefined;
-      }
-    }
-
-    const courseUpCtrl = new CourseUpControl();
-    map.addControl(courseUpCtrl, 'top-right');
-
-    map.on('dragstart', () => {
-      if (!isProgrammaticMove && courseUpEnabled) {
-        courseUpEnabled = false;
-        courseUpCtrl.updateUI();
-      }
-    });
-
-    const wrapperEl = document.createElement('div');
-    wrapperEl.className = 'nav-marker-wrapper';
-
-    const arrowEl = document.createElement('div');
-    arrowEl.className = 'nav-arrow';
-    arrowEl.innerHTML = `
-      <svg viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
-        <polygon points="16,3 27,27 16,21 5,27" fill="#0066ff" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round" />
-      </svg>
-    `;
-    wrapperEl.appendChild(arrowEl);
-
-    const geolocate = new maplibregl.GeolocateControl({
-      positionOptions: {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 5000
-      },
-      trackUserLocation: true,
-      showUserLocation: false,
-      showAccuracyCircle: false
-    });
-    map.addControl(geolocate, 'top-right');
-
-    function updateNavigationView(coords, heading) {
-      if (!Array.isArray(coords) || coords.length !== 2) return;
-      const [lon, lat] = coords;
-      if (typeof lon !== 'number' || typeof lat !== 'number' || Number.isNaN(lon) || Number.isNaN(lat)) return;
-
-      lastCoords = [lon, lat];
-
-      if (typeof heading === 'number' && !Number.isNaN(heading)) {
-        lastHeading = ((heading % 360) + 360) % 360;
-      }
-
-      if (!navMarker) {
-        navMarker = new maplibregl.Marker({
-          element: wrapperEl,
-          rotationAlignment: 'map',
-          pitchAlignment: 'map'
-        })
-          .setLngLat(lastCoords)
-          .setRotation(lastHeading)
-          .addTo(map);
-      } else {
-        navMarker.setLngLat(lastCoords);
-        navMarker.setRotation(lastHeading);
-      }
-
-      if (courseUpEnabled) {
-        moveCameraSafe({
-          center: lastCoords,
-          bearing: lastHeading,
-          pitch: getTargetPitch(),
-          duration: 300,
-          easing: (t) => t
+        geolocate.on('geolocate', (e) => {
+          const { longitude, latitude, heading } = e.coords;
+          updateNavigationView([longitude, latitude], heading);
         });
-      }
-    }
 
-    geolocate.on('geolocate', (e) => {
-      const { longitude, latitude, heading } = e.coords;
-      updateNavigationView([longitude, latitude], heading);
-    });
+        function requestFastInitialPosition() {
+          if (!('geolocation' in navigator)) return;
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              if (!lastCoords) {
+                const { longitude, latitude, heading } = pos.coords;
+                updateNavigationView([longitude, latitude], heading);
+              }
+            },
+            () => {},
+            {
+              enableHighAccuracy: false,
+              maximumAge: 60000,
+              timeout: 3000
+            }
+          );
+        }
 
-    function requestFastInitialPosition() {
-      if (!('geolocation' in navigator)) return;
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          if (!lastCoords) {
-            const { longitude, latitude, heading } = pos.coords;
-            updateNavigationView([longitude, latitude], heading);
+        window.addEventListener('deviceorientationabsolute', (e) => {
+          if (typeof e.alpha === 'number' && !Number.isNaN(e.alpha) && lastCoords && courseUpEnabled) {
+            const compassHeading = (360 - e.alpha) % 360;
+            updateNavigationView(lastCoords, compassHeading);
           }
-        },
-        () => {},
-        {
-          enableHighAccuracy: false,
-          maximumAge: 60000,
-          timeout: 3000
-        }
-      );
-    }
+        });
 
-    window.addEventListener('deviceorientationabsolute', (e) => {
-      if (typeof e.alpha === 'number' && !Number.isNaN(e.alpha) && lastCoords && courseUpEnabled) {
-        const compassHeading = (360 - e.alpha) % 360;
-        updateNavigationView(lastCoords, compassHeading);
-      }
-    });
+        window.addEventListener('deviceorientation', (e) => {
+          if (typeof e.webkitCompassHeading === 'number' && !Number.isNaN(e.webkitCompassHeading) && lastCoords && courseUpEnabled) {
+            updateNavigationView(lastCoords, e.webkitCompassHeading);
+          }
+        });
 
-    window.addEventListener('deviceorientation', (e) => {
-      if (typeof e.webkitCompassHeading === 'number' && !Number.isNaN(e.webkitCompassHeading) && lastCoords && courseUpEnabled) {
-        updateNavigationView(lastCoords, e.webkitCompassHeading);
-      }
-    });
+        map.on('load', () => {
+          map.addSource('confini', {
+            type: 'geojson',
+            data: mieiPoligoni
+          });
 
-    map.on('load', () => {
-      map.addSource('confini', {
-        type: 'geojson',
-        data: mieiPoligoni
-      });
+          map.addLayer({
+            id: 'poligoni-bordo',
+            type: 'line',
+            source: 'confini',
+            paint: {
+              'line-color': '#0066ff',
+              'line-width': 5
+            }
+          });
 
-      map.addLayer({
-        id: 'poligoni-bordo',
-        type: 'line',
-        source: 'confini',
-        paint: {
-          'line-color': '#0066ff',
-          'line-width': 4
-        }
-      });
+          const coords = mieiPoligoni.features[0]?.geometry?.coordinates || [];
+          if (coords.length > 0) {
+            const bounds = coords.reduce(
+              (b, coord) => b.extend(coord),
+              new maplibregl.LngLatBounds(coords[0], coords[0])
+            );
+            map.fitBounds(bounds, { padding: 40 });
+          }
 
-      const coords = mieiPoligoni.features[0]?.geometry?.coordinates || [];
-      if (coords.length > 0) {
-        const bounds = coords.reduce(
-          (b, coord) => b.extend(coord),
-          new maplibregl.LngLatBounds(coords[0], coords[0])
-        );
-        map.fitBounds(bounds, { padding: 40 });
-      }
-
-      requestFastInitialPosition();
-      geolocate.trigger();
-    });
+          requestFastInitialPosition();
+          try {
+            geolocate.trigger();
+          } catch (_) {}
+        });
+      })
+      .catch((err) => showError(err.message || String(err)));
   </script>
 </body>
 </html>
