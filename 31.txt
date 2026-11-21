@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mappa con Confini Blu e Navigatore Course-Up</title>
+  <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5/dist/maplibre-gl.js"></script>
+  <style>
+    html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
+
+    .nav-marker-wrapper {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .nav-arrow {
+      width: 32px;
+      height: 32px;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+    }
+
+    /* Pulsante per attivare/disattivare Course-Up */
+    .course-up-btn {
+      background: #ffffff;
+      border: none;
+      border-radius: 4px;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      padding: 6px 10px;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .course-up-btn.active {
+      background: #0066ff;
+      color: #ffffff;
+    }
+
+    /* Pulsante per alternare vista 2D / 3D */
+    .view-mode-btn {
+      background: #ffffff;
+      border: none;
+      border-radius: 4px;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      padding: 6px 10px;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .view-mode-btn.is-3d {
+      background: #1e293b;
+      color: #ffffff;
+    }
+
+    #err-box {
+      display: none;
+      position: fixed;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      z-index: 9999;
+      background: #fff3f3;
+      color: #900;
+      border: 2px solid #c00;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 35vh;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="err-box"></div>
+  <script>
+    window.addEventListener('error', (ev) => {
+      const box = document.getElementById('err-box');
+      if (box) {
+        box.style.display = 'block';
+        box.textContent += (box.textContent ? '\n' : '') + (ev.message || 'Errore');
+      }
+    });
+
+    const mieiPoligoni = {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "geometry": {
+            "coordinates": [
+              [7.734741, 45.108882],
+              [7.734301, 45.10811],
+              [7.73429, 45.10797],
+              [7.734687, 45.107766],
+              [7.734961, 45.107486],
+              [7.735084, 45.107149],
+              [7.735396, 45.106297],
+              [7.735487, 45.105884],
+              [7.735797, 45.1044],
+              [7.73584, 45.104021],
+              [7.735601, 45.103799],
+              [7.735955, 45.103368],
+              [7.737264, 45.102233],
+              [7.738144, 45.101416],
+              [7.738574, 45.10128],
+              [7.739518, 45.101416],
+              [7.740076, 45.101212],
+              [7.740699, 45.101038],
+              [7.741332, 45.100743],
+              [7.741407, 45.10069],
+              [7.740999, 45.100296],
+              [7.74071, 45.099888],
+              [7.740431, 45.099419],
+              [7.740044, 45.098556],
+              [7.739604, 45.097398],
+              [7.739411, 45.096922],
+              [7.739422, 45.096536],
+              [7.739035, 45.095491],
+              [7.741128, 45.096142],
+              [7.744219, 45.097096],
+              [7.74649, 45.09775],
+              [7.747413, 45.097924],
+              [7.748454, 45.098227],
+              [7.748873, 45.098287],
+              [7.748948, 45.099589],
+              [7.749409, 45.100573],
+              [7.750629, 45.100321],
+              [7.751433, 45.101215],
+              [7.75168, 45.103138],
+              [7.750043, 45.103576],
+              [7.74883, 45.104094],
+              [7.747607, 45.104623],
+              [7.746877, 45.105085],
+              [7.746372, 45.105546],
+              [7.745997, 45.105743],
+              [7.745331, 45.106053],
+              [7.744636, 45.105289],
+              [7.742339, 45.105653],
+              [7.741404, 45.105842],
+              [7.742811, 45.107968],
+              [7.734826, 45.108878]
+            ],
+            "type": "LineString"
+          }
+        }
+      ]
+    };
+
+    // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
+    const PITCH_2D = 0;
+    const PITCH_3D = 60;
+    let is3DMode = false;
+
+    function getTargetPitch() {
+      return is3DMode ? PITCH_3D : PITCH_2D;
+    }
+
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: {
+        version: 8,
+        sources: {
+          esriStreet: {
+            type: 'raster',
+            tiles: [
+              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'
+            ],
+            tileSize: 256,
+            attribution: '© Esri, OpenStreetMap contributors'
+          }
+        },
+        layers: [
+          {
+            id: 'esri-street-layer',
+            type: 'raster',
+            source: 'esriStreet'
+          }
+        ]
+      },
+      center: [7.743, 45.102],
+      zoom: 14,
+      pitch: PITCH_2D
+    });
+
+    map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
+
+    // Stato Course-Up disattivato di default all'apertura
+    let courseUpEnabled = false;
+    let navMarker = null;
+    let lastHeading = 0;
+    let lastCoords = null;
+    let isProgrammaticMove = false;
+
+    function moveCameraSafe(options) {
+      isProgrammaticMove = true;
+      map.easeTo(options);
+      map.once('moveend', () => {
+        isProgrammaticMove = false;
+      });
+    }
+
+    async function requestCompassPermissionIfNeeded() {
+      if (
+        typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function'
+      ) {
+        try {
+          await DeviceOrientationEvent.requestPermission();
+        } catch (_) {}
+      }
+    }
+
+    // Controllo per passare da 2D a 3D mantenendo lo stato Course-Up
+    class ViewModeControl {
+      onAdd(map) {
+        this._map = map;
+        this._container = document.createElement('div');
+        this._container.className = 'maplibregl-ctrl';
+
+        this._btn = document.createElement('button');
+        this._btn.type = 'button';
+        this._btn.className = 'view-mode-btn';
+        this._btn.textContent = '2D';
+        this._btn.title = 'Passa tra vista 2D e vista 3D';
+
+        this._btn.addEventListener('click', () => {
+          is3DMode = !is3DMode;
+          this.updateUI();
+
+          const cameraOptions = {
+            pitch: getTargetPitch(),
+            duration: 450
+          };
+
+          if (courseUpEnabled && lastCoords) {
+            cameraOptions.center = lastCoords;
+            cameraOptions.bearing = lastHeading;
+          }
+
+          moveCameraSafe(cameraOptions);
+        });
+
+        this._container.appendChild(this._btn);
+        return this._container;
+      }
+
+      updateUI() {
+        if (is3DMode) {
+          this._btn.textContent = '3D';
+          this._btn.classList.add('is-3d');
+        } else {
+          this._btn.textContent = '2D';
+          this._btn.classList.remove('is-3d');
+        }
+      }
+
+      onRemove() {
+        this._container.parentNode.removeChild(this._container);
+        this._map = undefined;
+      }
+    }
+
+    const viewModeCtrl = new ViewModeControl();
+    map.addControl(viewModeCtrl, 'top-right');
+
+    // Controllo personalizzato per attivare/disattivare Course-Up
+    class CourseUpControl {
+      onAdd(map) {
+        this._map = map;
+        this._container = document.createElement('div');
+        this._container.className = 'maplibregl-ctrl';
+
+        this._btn = document.createElement('button');
+        this._btn.type = 'button';
+        this._btn.className = 'course-up-btn';
+        this._btn.innerHTML = '🧭 Course-Up';
+        this._btn.title = 'Attiva/Disattiva rotazione automatica mappa';
+
+        this._btn.addEventListener('click', async () => {
+          courseUpEnabled = !courseUpEnabled;
+          this.updateUI();
+
+          if (courseUpEnabled) {
+            await requestCompassPermissionIfNeeded();
+            if (lastCoords) {
+              moveCameraSafe({
+                center: lastCoords,
+                bearing: lastHeading,
+                pitch: getTargetPitch(),
+                duration: 450
+              });
+            }
+          } else {
+            moveCameraSafe({
+              bearing: 0,
+              pitch: getTargetPitch(),
+              duration: 450
+            });
+          }
+        });
+
+        this._container.appendChild(this._btn);
+        return this._container;
+      }
+
+      updateUI() {
+        if (courseUpEnabled) {
+          this._btn.classList.add('active');
+        } else {
+          this._btn.classList.remove('active');
+        }
+      }
+
+      onRemove() {
+        this._container.parentNode.removeChild(this._container);
+        this._map = undefined;
+      }
+    }
+
+    const courseUpCtrl = new CourseUpControl();
+    map.addControl(courseUpCtrl, 'top-right');
+
+    // Se l'utente sposta o ruota manualmente la mappa, mette in pausa Course-Up
+    function pauseCourseUpOnUserInput() {
+      if (!isProgrammaticMove && courseUpEnabled) {
+        courseUpEnabled = false;
+        courseUpCtrl.updateUI();
+      }
+    }
+    map.on('dragstart', pauseCourseUpOnUserInput);
+    map.on('rotatestart', pauseCourseUpOnUserInput);
+
+    // Crea il triangolino/freccia da navigatore
+    const wrapperEl = document.createElement('div');
+    wrapperEl.className = 'nav-marker-wrapper';
+
+    const arrowEl = document.createElement('div');
+    arrowEl.className = 'nav-arrow';
+    arrowEl.innerHTML = `
+      <svg viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="16,3 27,27 16,21 5,27" fill="#0066ff" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round" />
+      </svg>
+    `;
+    wrapperEl.appendChild(arrowEl);
+
+    const geolocate = new maplibregl.GeolocateControl({
+      positionOptions: {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 5000
+      },
+      trackUserLocation: true,
+      showUserLocation: false,
+      showAccuracyCircle: false
+    });
+    map.addControl(geolocate, 'top-right');
+
+    function updateNavigationView(coords, heading) {
+      if (!Array.isArray(coords) || coords.length !== 2) return;
+      const [lon, lat] = coords;
+      if (typeof lon !== 'number' || typeof lat !== 'number' || Number.isNaN(lon) || Number.isNaN(lat)) return;
+
+      lastCoords = [lon, lat];
+
+      if (typeof heading === 'number' && !Number.isNaN(heading)) {
+        lastHeading = ((heading % 360) + 360) % 360;
+      }
+
+      if (!navMarker) {
+        navMarker = new maplibregl.Marker({
+          element: wrapperEl,
+          rotationAlignment: 'map',
+          pitchAlignment: 'map'
+        })
+          .setLngLat(lastCoords)
+          .setRotation(lastHeading)
+          .addTo(map);
+      } else {
+        navMarker.setLngLat(lastCoords);
+        navMarker.setRotation(lastHeading);
+      }
+
+      if (courseUpEnabled) {
+        moveCameraSafe({
+          center: lastCoords,
+          bearing: lastHeading,
+          pitch: getTargetPitch(),
+          duration: 300,
+          easing: (t) => t
+        });
+      }
+    }
+
+    geolocate.on('geolocate', (e) => {
+      const { longitude, latitude, heading } = e.coords;
+      updateNavigationView([longitude, latitude], heading);
+    });
+
+    // Prima stima veloce tramite rete/cache in attesa che il GPS ad alta precisione agganci
+    function requestFastInitialPosition() {
+      if (!('geolocation' in navigator)) return;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (!lastCoords) {
+            const { longitude, latitude, heading } = pos.coords;
+            updateNavigationView([longitude, latitude], heading);
+          }
+        },
+        () => {},
+        {
+          enableHighAccuracy: false,
+          maximumAge: 60000,
+          timeout: 3000
+        }
+      );
+    }
+
+    window.addEventListener('deviceorientationabsolute', (e) => {
+      if (typeof e.alpha === 'number' && !Number.isNaN(e.alpha) && lastCoords && courseUpEnabled) {
+        const compassHeading = (360 - e.alpha) % 360;
+        updateNavigationView(lastCoords, compassHeading);
+      }
+    });
+
+    window.addEventListener('deviceorientation', (e) => {
+      if (typeof e.webkitCompassHeading === 'number' && !Number.isNaN(e.webkitCompassHeading) && lastCoords && courseUpEnabled) {
+        updateNavigationView(lastCoords, e.webkitCompassHeading);
+      }
+    });
+
+    map.on('load', () => {
+      map.addSource('confini', {
+        type: 'geojson',
+        data: mieiPoligoni
+      });
+
+      map.addLayer({
+        id: 'poligoni-bordo',
+        type: 'line',
+        source: 'confini',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4
+        }
+      });
+
+      const coords = mieiPoligoni.features[0]?.geometry?.coordinates || [];
+      if (coords.length > 0) {
+        const bounds = coords.reduce(
+          (b, coord) => b.extend(coord),
+          new maplibregl.LngLatBounds(coords[0], coords[0])
+        );
+        isProgrammaticMove = true;
+        map.fitBounds(bounds, { padding: 40 });
+        map.once('moveend', () => {
+          isProgrammaticMove = false;
+        });
+      }
+
+      requestFastInitialPosition();
+      geolocate.trigger();
+    });
+  </script>
+</body>
+</html>
