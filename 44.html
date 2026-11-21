@@ -379,4 +379,104 @@
 
       lastCoords = [lon, lat];
 
-      if (typeof heading === 'number' && !Number.isNaN(heading))
+      if (typeof heading === 'number' && !Number.isNaN(heading)) {
+        lastHeading = ((heading % 360) + 360) % 360;
+      }
+
+      if (!navMarker) {
+        navMarker = new maplibregl.Marker({
+          element: wrapperEl,
+          rotationAlignment: 'map',
+          pitchAlignment: 'map'
+        })
+          .setLngLat(lastCoords)
+          .setRotation(lastHeading)
+          .addTo(map);
+      } else {
+        navMarker.setLngLat(lastCoords);
+        navMarker.setRotation(lastHeading);
+      }
+
+      if (courseUpEnabled) {
+        moveCameraSafe({
+          center: lastCoords,
+          bearing: lastHeading,
+          pitch: getTargetPitch(),
+          duration: 300,
+          easing: (t) => t
+        });
+      }
+    }
+
+    geolocate.on('geolocate', (e) => {
+      const { longitude, latitude, heading } = e.coords;
+      updateNavigationView([longitude, latitude], heading);
+    });
+
+    // Prima stima veloce tramite rete/cache in attesa che il GPS ad alta precisione agganci
+    function requestFastInitialPosition() {
+      if (!('geolocation' in navigator)) return;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (!lastCoords) {
+            const { longitude, latitude, heading } = pos.coords;
+            updateNavigationView([longitude, latitude], heading);
+          }
+        },
+        () => {},
+        {
+          enableHighAccuracy: false,
+          maximumAge: 60000,
+          timeout: 3000
+        }
+      );
+    }
+
+    window.addEventListener('deviceorientationabsolute', (e) => {
+      if (typeof e.alpha === 'number' && !Number.isNaN(e.alpha) && lastCoords && courseUpEnabled) {
+        const compassHeading = (360 - e.alpha) % 360;
+        updateNavigationView(lastCoords, compassHeading);
+      }
+    });
+
+    window.addEventListener('deviceorientation', (e) => {
+      if (typeof e.webkitCompassHeading === 'number' && !Number.isNaN(e.webkitCompassHeading) && lastCoords && courseUpEnabled) {
+        updateNavigationView(lastCoords, e.webkitCompassHeading);
+      }
+    });
+
+    map.on('load', () => {
+      map.addSource('confini', {
+        type: 'geojson',
+        data: mieiPoligoni
+      });
+
+      map.addLayer({
+        id: 'poligoni-bordo',
+        type: 'line',
+        source: 'confini',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4
+        }
+      });
+
+      const coords = mieiPoligoni.features[0]?.geometry?.coordinates || [];
+      if (coords.length > 0) {
+        const bounds = coords.reduce(
+          (b, coord) => b.extend(coord),
+          new maplibregl.LngLatBounds(coords[0], coords[0])
+        );
+        isProgrammaticMove = true;
+        map.fitBounds(bounds, { padding: 40 });
+        map.once('moveend', () => {
+          isProgrammaticMove = false;
+        });
+      }
+
+      requestFastInitialPosition();
+      geolocate.trigger();
+    });
+  </script>
+</body>
+</html>
