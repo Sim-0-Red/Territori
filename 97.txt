@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mappa con Confini Blu e Navigatore Course-Up</title>
+  <link href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+  <style>
+    html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
+
+    .nav-marker-wrapper {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .nav-arrow {
+      width: 32px;
+      height: 32px;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+    }
+
+    /* Pulsante per attivare/disattivare Course-Up */
+    .course-up-btn {
+      background: #ffffff;
+      border: none;
+      border-radius: 4px;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      padding: 6px 10px;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .course-up-btn.active {
+      background: #0066ff;
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    const mieiPoligoni = {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "geometry": {
+            "coordinates": [
+              [
+                7.677025,
+                45.104736
+              ],
+              [
+                7.677234,
+                45.105887
+              ],
+              [
+                7.677384,
+                45.106996
+              ],
+              [
+                7.677593,
+                45.10817
+              ],
+              [
+                7.67769,
+                45.10901
+              ],
+              [
+                7.677878,
+                45.109919
+              ],
+              [
+                7.677937,
+                45.11026
+              ],
+              [
+                7.678522,
+                45.11311
+              ],
+              [
+                7.67055,
+                45.114193
+              ],
+              [
+                7.667384,
+                45.114602
+              ],
+              [
+                7.667057,
+                45.111073
+              ],
+              [
+                7.666987,
+                45.110706
+              ],
+              [
+                7.666896,
+                45.109885
+              ],
+              [
+                7.666842,
+                45.109317
+              ],
+              [
+                7.666778,
+                45.108692
+              ],
+              [
+                7.666714,
+                45.108189
+              ],
+              [
+                7.666553,
+                45.106773
+              ],
+              [
+                7.666424,
+                45.105932
+              ],
+              [
+                7.666359,
+                45.105364
+              ],
+              [
+                7.667652,
+                45.105281
+              ],
+              [
+                7.668323,
+                45.105247
+              ],
+              [
+                7.6685,
+                45.105228
+              ],
+              [
+                7.669622,
+                45.105163
+              ],
+              [
+                7.670657,
+                45.105107
+              ],
+              [
+                7.67232,
+                45.105012
+              ],
+              [
+                7.67379,
+                45.104929
+              ],
+              [
+                7.677019,
+                45.104736
+              ],
+              [
+                7.676559,
+                45.104755
+              ]
+            ],
+            "type": "LineString"
+          },
+          "properties": {
+            "_umap_options": {
+              "opacity": 1,
+              "weight": 5
+            }
+          }
+        }
+      ]
+    };
+
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: {
+        version: 8,
+        sources: {
+          esriStreet: {
+            type: 'raster',
+            tiles: [
+              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'
+            ],
+            tileSize: 256,
+            attribution: '© Esri, OpenStreetMap contributors'
+          }
+        },
+        layers: [
+          {
+            id: 'esri-street-layer',
+            type: 'raster',
+            source: 'esriStreet'
+          }
+        ]
+      },
+      center: [7.743, 45.102],
+      zoom: 14,
+      pitch: 0
+    });
+
+    map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
+
+    // Stato Course-Up attivo di default
+    let courseUpEnabled = true;
+    let navMarker = null;
+    let lastHeading = 0;
+    let lastCoords = null;
+
+    // Controllo personalizzato per attivare/disattivare Course-Up
+    class CourseUpControl {
+      onAdd(map) {
+        this._map = map;
+        this._container = document.createElement('div');
+        this._container.className = 'maplibregl-ctrl';
+
+        this._btn = document.createElement('button');
+        this._btn.type = 'button';
+        this._btn.className = 'course-up-btn active';
+        this._btn.innerHTML = '🧭 Course-Up';
+        this._btn.title = 'Attiva/Disattiva rotazione automatica mappa';
+
+        this._btn.addEventListener('click', () => {
+          courseUpEnabled = !courseUpEnabled;
+          this.updateUI();
+
+          if (courseUpEnabled && lastCoords) {
+            // Riallinea subito la mappa alla direzione attuale in 2D
+            map.easeTo({
+              center: lastCoords,
+              bearing: lastHeading,
+              pitch: 0,
+              duration: 500
+            });
+          } else if (!courseUpEnabled) {
+            // Ripristina Nord in alto e vista piatta 2D
+            map.easeTo({
+              bearing: 0,
+              pitch: 0,
+              duration: 500
+            });
+          }
+        });
+
+        this._container.appendChild(this._btn);
+        return this._container;
+      }
+
+      updateUI() {
+        if (courseUpEnabled) {
+          this._btn.classList.add('active');
+        } else {
+          this._btn.classList.remove('active');
+        }
+      }
+
+      onRemove() {
+        this._container.parentNode.removeChild(this._container);
+        this._map = undefined;
+      }
+    }
+
+    const courseUpCtrl = new CourseUpControl();
+    map.addControl(courseUpCtrl, 'top-right');
+
+    // Se l'utente sposta o ruota manualmente la mappa con le dita, mette in pausa Course-Up
+    map.on('dragstart', () => {
+      if (courseUpEnabled) {
+        courseUpEnabled = false;
+        courseUpCtrl.updateUI();
+      }
+    });
+
+    // Crea il triangolino/freccia da navigatore
+    const wrapperEl = document.createElement('div');
+    wrapperEl.className = 'nav-marker-wrapper';
+
+    const arrowEl = document.createElement('div');
+    arrowEl.className = 'nav-arrow';
+    arrowEl.innerHTML = `
+      <svg viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="16,3 27,27 16,21 5,27" fill="#0066ff" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round" />
+      </svg>
+    `;
+    wrapperEl.appendChild(arrowEl);
+
+    const geolocate = new maplibregl.GeolocateControl({
+      positionOptions: {
+        enableHighAccuracy: true
+      },
+      trackUserLocation: true,
+      showUserLocation: false,
+      showAccuracyCircle: false
+    });
+    map.addControl(geolocate, 'top-right');
+
+    // Funzione centralizzata per aggiornare posizione e rotazione (Course-Up in 2D)
+    function updateNavigationView(coords, heading) {
+      lastCoords = coords;
+
+      if (typeof heading === 'number' && !Number.isNaN(heading)) {
+        lastHeading = heading;
+      }
+
+      if (!navMarker) {
+        navMarker = new maplibregl.Marker({
+          element: wrapperEl,
+          rotationAlignment: 'map',
+          pitchAlignment: 'map'
+        })
+          .setLngLat(coords)
+          .setRotation(lastHeading)
+          .addTo(map);
+      } else {
+        navMarker.setLngLat(coords);
+        navMarker.setRotation(lastHeading);
+      }
+
+      // Se Course-Up è attivo, ruota la mappa in 2D (pitch: 0) in modo che la direzione punti sempre in alto
+      if (courseUpEnabled) {
+        map.easeTo({
+          center: coords,
+          bearing: lastHeading,
+          pitch: 0,
+          duration: 300,
+          easing: (t) => t
+        });
+      }
+    }
+
+    geolocate.on('geolocate', (e) => {
+      const { longitude, latitude, heading } = e.coords;
+      updateNavigationView([longitude, latitude], heading);
+    });
+
+    // Fallback bussola del dispositivo (utile quando si è fermi o si cammina piano e il GPS non dà heading)
+    window.addEventListener('deviceorientationabsolute', (e) => {
+      if (e.alpha !== null && lastCoords) {
+        const compassHeading = (360 - e.alpha) % 360;
+        updateNavigationView(lastCoords, compassHeading);
+      }
+    });
+
+    // Supporto bussola per dispositivi iOS (Safari)
+    window.addEventListener('deviceorientation', (e) => {
+      if (typeof e.webkitCompassHeading === 'number' && lastCoords) {
+        updateNavigationView(lastCoords, e.webkitCompassHeading);
+      }
+    });
+
+    map.on('load', () => {
+      map.addSource('confini', {
+        type: 'geojson',
+        data: mieiPoligoni
+      });
+
+      map.addLayer({
+        id: 'poligoni-bordo',
+        type: 'line',
+        source: 'confini',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4
+        }
+      });
+
+      const coords = mieiPoligoni.features[0]?.geometry?.coordinates || [];
+      if (coords.length > 0) {
+        const bounds = coords.reduce(
+          (b, coord) => b.extend(coord),
+          new maplibregl.LngLatBounds(coords[0], coords[0])
+        );
+        map.fitBounds(bounds, { padding: 40 });
+      }
+
+      // Attiva automaticamente la geolocalizzazione all'avvio della mappa
+      geolocate.trigger();
+    });
+  </script>
+</body>
+</html>
