@@ -138,7 +138,8 @@
         ]
       },
       center: [7.743, 45.102],
-      zoom: 14
+      zoom: 14,
+      pitch: 0
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
@@ -167,15 +168,15 @@
           this.updateUI();
 
           if (courseUpEnabled && lastCoords) {
-            // Riallinea subito la mappa alla direzione attuale
+            // Riallinea subito la mappa alla direzione attuale in 2D
             map.easeTo({
               center: lastCoords,
               bearing: lastHeading,
-              pitch: 45, // Leggera inclinazione stile navigatore (metti 0 se la preferisci piatta)
+              pitch: 0,
               duration: 500
             });
           } else if (!courseUpEnabled) {
-            // Ripristina Nord in alto e vista piatta
+            // Ripristina Nord in alto e vista piatta 2D
             map.easeTo({
               bearing: 0,
               pitch: 0,
@@ -236,7 +237,7 @@
     });
     map.addControl(geolocate, 'top-right');
 
-    // Funzione centralizzata per aggiornare posizione e rotazione (Course-Up)
+    // Funzione centralizzata per aggiornare posizione e rotazione (Course-Up in 2D)
     function updateNavigationView(coords, heading) {
       lastCoords = coords;
 
@@ -258,12 +259,12 @@
         navMarker.setRotation(lastHeading);
       }
 
-      // Se Course-Up è attivo, ruota la mappa in modo che la direzione punti sempre in alto
+      // Se Course-Up è attivo, ruota la mappa in 2D (pitch: 0) in modo che la direzione punti sempre in alto
       if (courseUpEnabled) {
         map.easeTo({
           center: coords,
           bearing: lastHeading,
-          pitch: 45, // Metti 0 se vuoi la visuale completamente dall'alto (2D)
+          pitch: 0,
           duration: 300,
           easing: (t) => t
         });
