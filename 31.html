@@ -107,54 +107,18 @@
           "type": "Feature",
           "geometry": {
             "coordinates": [
-              [
-                7.69528,
-                45.090512
-              ],
-              [
-                7.69821,
-                45.089808
-              ],
-              [
-                7.699101,
-                45.089589
-              ],
-              [
-                7.698188,
-                45.088904
-              ],
-              [
-                7.697909,
-                45.088749
-              ],
-              [
-                7.697426,
-                45.088733
-              ],
-              [
-                7.696595,
-                45.088991
-              ],
-              [
-                7.696471,
-                45.089002
-              ],
-              [
-                7.696176,
-                45.089112
-              ],
-              [
-                7.695312,
-                45.089309
-              ],
-              [
-                7.694754,
-                45.089471
-              ],
-              [
-                7.695263,
-                45.090501
-              ]
+              [7.69528, 45.090512],
+              [7.69821, 45.089808],
+              [7.699101, 45.089589],
+              [7.698188, 45.088904],
+              [7.697909, 45.088749],
+              [7.697426, 45.088733],
+              [7.696595, 45.088991],
+              [7.696471, 45.089002],
+              [7.696176, 45.089112],
+              [7.695312, 45.089309],
+              [7.694754, 45.089471],
+              [7.695263, 45.090501]
             ],
             "type": "LineString"
           },
@@ -168,7 +132,6 @@
       ]
     };
 
-    // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
     const PITCH_3D = 60;
     let is3DMode = false;
@@ -206,7 +169,6 @@
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
 
-    // Stato Course-Up disattivato di default all'apertura
     let courseUpEnabled = false;
     let navMarker = null;
     let lastHeading = 0;
@@ -232,7 +194,6 @@
       }
     }
 
-    // Controllo per passare da 2D a 3D mantenendo lo stato Course-Up
     class ViewModeControl {
       onAdd(map) {
         this._map = map;
@@ -285,7 +246,6 @@
     const viewModeCtrl = new ViewModeControl();
     map.addControl(viewModeCtrl, 'top-right');
 
-    // Controllo personalizzato per attivare/disattivare Course-Up
     class CourseUpControl {
       onAdd(map) {
         this._map = map;
@@ -342,7 +302,6 @@
     const courseUpCtrl = new CourseUpControl();
     map.addControl(courseUpCtrl, 'top-right');
 
-    // Se l'utente sposta o ruota manualmente la mappa con le dita, mette in pausa Course-Up
     map.on('dragstart', () => {
       if (!isProgrammaticMove && courseUpEnabled) {
         courseUpEnabled = false;
@@ -350,7 +309,6 @@
       }
     });
 
-    // Crea il triangolino/freccia da navigatore
     const wrapperEl = document.createElement('div');
     wrapperEl.className = 'nav-marker-wrapper';
 
@@ -416,7 +374,6 @@
       updateNavigationView([longitude, latitude], heading);
     });
 
-    // Prima stima veloce tramite rete/cache in attesa che il GPS ad alta precisione agganci
     function requestFastInitialPosition() {
       if (!('geolocation' in navigator)) return;
       navigator.geolocation.getCurrentPosition(
@@ -468,4 +425,14 @@
       if (coords.length > 0) {
         const bounds = coords.reduce(
           (b, coord) => b.extend(coord),
-          new
+          new maplibregl.LngLatBounds(coords[0], coords[0])
+        );
+        map.fitBounds(bounds, { padding: 40 });
+      }
+
+      requestFastInitialPosition();
+      geolocate.trigger();
+    });
+  </script>
+</body>
+</html>
