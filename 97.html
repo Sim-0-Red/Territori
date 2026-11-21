@@ -242,8 +242,8 @@
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
 
-    // Stato Course-Up attivo di default
-    let courseUpEnabled = true;
+    // Stato Course-Up disattivato di default all'apertura
+    let courseUpEnabled = false;
     let navMarker = null;
     let lastHeading = 0;
     let lastCoords = null;
@@ -310,7 +310,7 @@
 
         this._btn = document.createElement('button');
         this._btn.type = 'button';
-        this._btn.className = 'course-up-btn active';
+        this._btn.className = 'course-up-btn';
         this._btn.innerHTML = '🧭 Course-Up';
         this._btn.title = 'Attiva/Disattiva rotazione automatica mappa';
 
@@ -422,4 +422,72 @@
 
     geolocate.on('geolocate', (e) => {
       const { longitude, latitude, heading } = e.coords;
-      updateNavigationView([longitude,
+      updateNavigationView([longitude, latitude], heading);
+    });
+
+    // Prima stima veloce tramite rete/cache in attesa che il GPS ad alta precisione agganci
+    function requestFastInitialPosition() {
+      if (!('geolocation' in navigator)) return;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (!lastCoords) {
+            const { longitude, latitude, heading } = pos.coords;
+            updateNavigationView([longitude, latitude], heading);
+          }
+        },
+        () => {},
+        {
+          enableHighAccuracy: false,
+          maximumAge: 60000,
+          timeout: 3000
+        }
+      );
+    }
+
+    // Fallback bussola del dispositivo (utile quando si è fermi o si cammina piano e il GPS non dà heading)
+    window.addEventListener('deviceorientationabsolute', (e) => {
+      if (e.alpha !== null && lastCoords) {
+        const compassHeading = (360 - e.alpha) % 360;
+        updateNavigationView(lastCoords, compassHeading);
+      }
+    });
+
+    // Supporto bussola per dispositivi iOS (Safari)
+    window.addEventListener('deviceorientation', (e) => {
+      if (typeof e.webkitCompassHeading === 'number' && lastCoords) {
+        updateNavigationView(lastCoords, e.webkitCompassHeading);
+      }
+    });
+
+    map.on('load', () => {
+      map.addSource('confini', {
+        type: 'geojson',
+        data: mieiPoligoni
+      });
+
+      map.addLayer({
+        id: 'poligoni-bordo',
+        type: 'line',
+        source: 'confini',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4
+        }
+      });
+
+      const coords = mieiPoligoni.features[0]?.geometry?.coordinates || [];
+      if (coords.length > 0) {
+        const bounds = coords.reduce(
+          (b, coord) => b.extend(coord),
+          new maplibregl.LngLatBounds(coords[0], coords[0])
+        );
+        map.fitBounds(bounds, { padding: 40 });
+      }
+
+      // Chiede subito una stima rapida e avvia la geolocalizzazione continua
+      requestFastInitialPosition();
+      geolocate.trigger();
+    });
+  </script>
+</body>
+</html>
