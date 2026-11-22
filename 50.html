@@ -435,13 +435,14 @@
     `;
     wrapperEl.appendChild(arrowEl);
 
+    // Pulsante mirino GPS manuale (non sposta la mappa finché non lo premi)
     const geolocate = new maplibregl.GeolocateControl({
       positionOptions: {
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 5000
       },
-      trackUserLocation: true,
+      trackUserLocation: false,
       showUserLocation: false,
       showAccuracyCircle: false
     });
@@ -472,6 +473,7 @@
         navMarker.setRotation(lastHeading);
       }
 
+      // Sposta la camera solo se l'utente ha attivato Course-Up
       if (courseUpEnabled) {
         moveCameraSafe({
           center: lastCoords,
@@ -488,21 +490,19 @@
       updateNavigationView([longitude, latitude], heading);
     });
 
-    // Prima stima veloce tramite rete/cache in attesa che il GPS ad alta precisione agganci
-    function requestFastInitialPosition() {
+    // Tracciamento GPS in background: aggiorna la freccia senza spostare l'inquadratura iniziale
+    function startBackgroundTracking() {
       if (!('geolocation' in navigator)) return;
-      navigator.geolocation.getCurrentPosition(
+      navigator.geolocation.watchPosition(
         (pos) => {
-          if (!lastCoords) {
-            const { longitude, latitude, heading } = pos.coords;
-            updateNavigationView([longitude, latitude], heading);
-          }
+          const { longitude, latitude, heading } = pos.coords;
+          updateNavigationView([longitude, latitude], heading);
         },
         () => {},
         {
-          enableHighAccuracy: false,
-          maximumAge: 60000,
-          timeout: 3000
+          enableHighAccuracy: true,
+          maximumAge: 5000,
+          timeout: 10000
         }
       );
     }
@@ -573,8 +573,7 @@
       });
 
       fitGeoJsonBounds(territorioGeoJson);
-      requestFastInitialPosition();
-      geolocate.trigger();
+      startBackgroundTracking();
     });
   </script>
 </body>
