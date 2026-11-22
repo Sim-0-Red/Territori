@@ -3,7 +3,7 @@
 <head>
 <!-- Tag Open Graph per anteprima link -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Territorio 01 – Torino Centro" />
+  <meta property="og:title" content="Territorio – Mappa Interattiva" />
   <meta property="og:description" content="Mappa interattiva con confini e navigatore Course-Up" />
   <meta property="og:image" content="https://sim-0-red.github.io/Territori/anteprima.jpg" />
   <meta property="og:image:type" content="image/jpeg" />
@@ -108,7 +108,7 @@
       }
     });
 
-    // Dati GeoJSON del territorio
+    // Dati GeoJSON dei confini del territorio
     const territorioGeoJSON = {
       "type": "FeatureCollection",
       "features": [
@@ -185,33 +185,6 @@
           }
         }
       ]
-    };
-
-    // Poligono chiuso ricavato dal perimetro dei 4 lati per l'evidenziazione interna
-    const territorioAreaGeoJSON = {
-      "type": "Feature",
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [[
-          [7.68085, 45.067512],
-          [7.683243, 45.066661],
-          [7.684751, 45.066097],
-          [7.686758, 45.065373],
-          [7.686783, 45.065364],
-          [7.687932, 45.064937],
-          [7.68689, 45.06346],
-          [7.684975, 45.060719],
-          [7.684959, 45.060731],
-          [7.682238, 45.061715],
-          [7.679277, 45.062764],
-          [7.677855, 45.063249],
-          [7.67823, 45.063771],
-          [7.679067, 45.064994],
-          [7.67908, 45.065006],
-          [7.68084, 45.067528],
-          [7.68085, 45.067512]
-        ]]
-      }
     };
 
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
@@ -495,23 +468,7 @@
     });
 
     map.on('load', () => {
-      // Sorgente per l'area interna
-      map.addSource('territorio-area', {
-        type: 'geojson',
-        data: territorioAreaGeoJSON
-      });
-
-      map.addLayer({
-        id: 'territorio-fill',
-        type: 'fill',
-        source: 'territorio-area',
-        paint: {
-          'fill-color': '#0066ff',
-          'fill-opacity': 0.14
-        }
-      });
-
-      // Sorgente e layer per le linee di confine del territorio
+      // Sorgente e layer solo per le linee di confine blu del territorio
       map.addSource('territorio-confini', {
         type: 'geojson',
         data: territorioGeoJSON
@@ -532,7 +489,7 @@
         }
       });
 
-      // Centra automaticamente la mappa sul territorio all'avvio
+      // Centra automaticamente la mappa sui confini all'avvio
       const bounds = new maplibregl.LngLatBounds();
       territorioGeoJSON.features.forEach((feature) => {
         feature.geometry.coordinates.forEach((coord) => {
