@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<!-- Tag Open Graph per anteprima link -->
+  <!-- Tag Open Graph per anteprima link -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Territorio 03 – Torino Centro" />
   <meta property="og:description" content="Mappa interattiva con confini e navigatore Course-Up" />
@@ -15,7 +15,13 @@
   <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5/dist/maplibre-gl.js"></script>
   <style>
-    html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
+    html, body, #map {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
 
     .nav-marker-wrapper {
       width: 36px;
@@ -32,7 +38,6 @@
       filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
     }
 
-    /* Pulsante per attivare/disattivare Course-Up */
     .course-up-btn {
       background: #ffffff;
       border: none;
@@ -40,13 +45,17 @@
       box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
       cursor: pointer;
       padding: 6px 10px;
-      font-family: system-ui, -apple-system, sans-serif;
       font-size: 13px;
       font-weight: 600;
       color: #333;
       display: flex;
       align-items: center;
       gap: 6px;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .course-up-btn:hover {
+      background: #f8fafc;
     }
 
     .course-up-btn.active {
@@ -54,7 +63,6 @@
       color: #ffffff;
     }
 
-    /* Pulsante per alternare vista 2D / 3D */
     .view-mode-btn {
       background: #ffffff;
       border: none;
@@ -62,13 +70,17 @@
       box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
       cursor: pointer;
       padding: 6px 10px;
-      font-family: system-ui, -apple-system, sans-serif;
       font-size: 13px;
       font-weight: 700;
       color: #333;
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .view-mode-btn:hover {
+      background: #f8fafc;
     }
 
     .view-mode-btn.is-3d {
@@ -88,7 +100,7 @@
       border: 2px solid #c00;
       border-radius: 6px;
       padding: 10px 12px;
-      font-family: monospace;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-size: 12px;
       white-space: pre-wrap;
       max-height: 35vh;
@@ -99,13 +111,21 @@
 <body>
   <div id="map"></div>
   <div id="err-box"></div>
+
   <script>
-    window.addEventListener('error', (ev) => {
+    function showError(msg) {
       const box = document.getElementById('err-box');
-      if (box) {
-        box.style.display = 'block';
-        box.textContent += (box.textContent ? '\n' : '') + (ev.message || 'Errore');
-      }
+      if (!box) return;
+      box.style.display = 'block';
+      box.textContent += (box.textContent ? '\n' : '') + msg;
+    }
+
+    window.addEventListener('error', (ev) => {
+      showError(ev.message || 'Errore sconosciuto');
+    });
+
+    window.addEventListener('unhandledrejection', (ev) => {
+      showError(ev.reason?.message || String(ev.reason) || 'Promise rifiutata');
     });
 
     // Dati GeoJSON del territorio
@@ -115,143 +135,99 @@
         {
           "type": "Feature",
           "geometry": {
+            "type": "LineString",
             "coordinates": [
-              [
-                7.687936,
-                45.064998
-              ],
-              [
-                7.685757,
-                45.065769
-              ],
-              [
-                7.683933,
-                45.066441
-              ],
-              [
-                7.682436,
-                45.067009
-              ],
-              [
-                7.680922,
-                45.06755
-              ]
-            ],
-            "type": "LineString"
+              [7.687936, 45.064998],
+              [7.685757, 45.065769],
+              [7.683933, 45.066441],
+              [7.682436, 45.067009],
+              [7.680922, 45.06755]
+            ]
           },
           "properties": {
-            "_umap_options": {
-              "opacity": 1,
-              "weight": 5
-            }
+            "weight": 5,
+            "opacity": 1
           }
         },
         {
           "type": "Feature",
           "geometry": {
+            "type": "LineString",
             "coordinates": [
-              [
-                7.690782,
-                45.068988
-              ],
-              [
-                7.689246,
-                45.066763
-              ],
-              [
-                7.687958,
-                45.064991
-              ]
-            ],
-            "type": "LineString"
+              [7.690782, 45.068988],
+              [7.689246, 45.066763],
+              [7.687958, 45.064991]
+            ]
           },
           "properties": {
-            "_umap_options": {
-              "opacity": 1,
-              "weight": 5
-            }
+            "weight": 5,
+            "opacity": 1
           }
         },
         {
           "type": "Feature",
           "geometry": {
+            "type": "LineString",
             "coordinates": [
-              [
-                7.682485,
-                45.070002
-              ],
-              [
-                7.682915,
-                45.070687
-              ],
-              [
-                7.683956,
-                45.070744
-              ],
-              [
-                7.684342,
-                45.070691
-              ],
-              [
-                7.686591,
-                45.069881
-              ],
-              [
-                7.687079,
-                45.070403
-              ],
-              [
-                7.688463,
-                45.069885
-              ],
-              [
-                7.690776,
-                45.069003
-              ]
-            ],
-            "type": "LineString"
+              [7.682485, 45.070002],
+              [7.682915, 45.070687],
+              [7.683956, 45.070744],
+              [7.684342, 45.070691],
+              [7.686591, 45.069881],
+              [7.687079, 45.070403],
+              [7.688463, 45.069885],
+              [7.690776, 45.069003]
+            ]
           },
           "properties": {
-            "_umap_options": {
-              "opacity": 1,
-              "weight": 5
-            }
+            "weight": 5,
+            "opacity": 1
           }
         },
         {
           "type": "Feature",
           "geometry": {
+            "type": "LineString",
             "coordinates": [
-              [
-                7.680924,
-                45.067561
-              ],
-              [
-                7.681638,
-                45.068557
-              ],
-              [
-                7.682212,
-                45.069536
-              ],
-              [
-                7.68248,
-                45.069997
-              ]
-            ],
-            "type": "LineString"
+              [7.680924, 45.067561],
+              [7.681638, 45.068557],
+              [7.682212, 45.069536],
+              [7.68248, 45.069997]
+            ]
           },
           "properties": {
-            "_umap_options": {
-              "opacity": 1,
-              "weight": 5
-            }
+            "weight": 5,
+            "opacity": 1
           }
         }
       ]
     };
 
-    // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
+    function getGeoJSONBounds(geojson) {
+      const bounds = new maplibregl.LngLatBounds();
+      let hasCoords = false;
+
+      function visitCoords(coords) {
+        if (!Array.isArray(coords)) return;
+        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+          bounds.extend([coords[0], coords[1]]);
+          hasCoords = true;
+          return;
+        }
+        for (const item of coords) {
+          visitCoords(item);
+        }
+      }
+
+      if (geojson?.type === 'FeatureCollection' && Array.isArray(geojson.features)) {
+        for (const feature of geojson.features) {
+          visitCoords(feature?.geometry?.coordinates);
+        }
+      }
+
+      return hasCoords ? bounds : null;
+    }
+
     const PITCH_2D = 0;
     const PITCH_3D = 60;
     let is3DMode = false;
@@ -259,6 +235,12 @@
     function getTargetPitch() {
       return is3DMode ? PITCH_3D : PITCH_2D;
     }
+
+    function normalizeAngle(deg) {
+      return ((deg % 360) + 360) % 360;
+    }
+
+    const initialBounds = getGeoJSONBounds(territorio03GeoJSON);
 
     const map = new maplibregl.Map({
       container: 'map',
@@ -282,25 +264,38 @@
           }
         ]
       },
-      center: [7.6869, 45.0703],
-      zoom: 13,
+      center: initialBounds ? initialBounds.getCenter() : [7.6858, 45.0678],
+      zoom: 15,
       pitch: PITCH_2D
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
 
-    // Stato Course-Up disattivato di default all'apertura
     let courseUpEnabled = false;
     let navMarker = null;
     let lastHeading = 0;
     let lastCoords = null;
-    let isProgrammaticMove = false;
+    let programmaticMovesCount = 0;
 
     function moveCameraSafe(options) {
-      isProgrammaticMove = true;
+      programmaticMovesCount += 1;
       map.easeTo(options);
       map.once('moveend', () => {
-        isProgrammaticMove = false;
+        programmaticMovesCount = Math.max(0, programmaticMovesCount - 1);
+      });
+    }
+
+    function fitTerritorio(animate = false) {
+      if (!initialBounds) return;
+      programmaticMovesCount += 1;
+      const fitOptions = {
+        padding: { top: 60, bottom: 60, left: 45, right: 65 },
+        maxZoom: 16,
+        duration: animate ? 500 : 0
+      };
+      map.fitBounds(initialBounds, fitOptions);
+      map.once('moveend', () => {
+        programmaticMovesCount = Math.max(0, programmaticMovesCount - 1);
       });
     }
 
@@ -315,10 +310,10 @@
       }
     }
 
-    // Controllo per passare da 2D a 3D mantenendo lo stato Course-Up
+    // Controllo 2D / 3D
     class ViewModeControl {
-      onAdd(map) {
-        this._map = map;
+      onAdd(mapInstance) {
+        this._map = mapInstance;
         this._container = document.createElement('div');
         this._container.className = 'maplibregl-ctrl';
 
@@ -360,7 +355,7 @@
       }
 
       onRemove() {
-        this._container.parentNode.removeChild(this._container);
+        this._container.parentNode?.removeChild(this._container);
         this._map = undefined;
       }
     }
@@ -368,10 +363,10 @@
     const viewModeCtrl = new ViewModeControl();
     map.addControl(viewModeCtrl, 'top-right');
 
-    // Controllo personalizzato per attivare/disattivare Course-Up
+    // Controllo Course-Up
     class CourseUpControl {
-      onAdd(map) {
-        this._map = map;
+      onAdd(mapInstance) {
+        this._map = mapInstance;
         this._container = document.createElement('div');
         this._container.className = 'maplibregl-ctrl';
 
@@ -409,15 +404,11 @@
       }
 
       updateUI() {
-        if (courseUpEnabled) {
-          this._btn.classList.add('active');
-        } else {
-          this._btn.classList.remove('active');
-        }
+        this._btn.classList.toggle('active', courseUpEnabled);
       }
 
       onRemove() {
-        this._container.parentNode.removeChild(this._container);
+        this._container.parentNode?.removeChild(this._container);
         this._map = undefined;
       }
     }
@@ -425,15 +416,18 @@
     const courseUpCtrl = new CourseUpControl();
     map.addControl(courseUpCtrl, 'top-right');
 
-    // Se l'utente sposta o ruota manualmente la mappa con le dita, mette in pausa Course-Up
-    map.on('dragstart', () => {
-      if (!isProgrammaticMove && courseUpEnabled) {
+    function pauseCourseUpOnManualInput() {
+      if (programmaticMovesCount === 0 && courseUpEnabled) {
         courseUpEnabled = false;
         courseUpCtrl.updateUI();
       }
-    });
+    }
 
-    // Crea il triangolino/freccia da navigatore
+    map.on('dragstart', pauseCourseUpOnManualInput);
+    map.on('rotatestart', pauseCourseUpOnManualInput);
+    map.on('pitchstart', pauseCourseUpOnManualInput);
+
+    // Marcatore freccia navigatore
     const wrapperEl = document.createElement('div');
     wrapperEl.className = 'nav-marker-wrapper';
 
@@ -446,7 +440,7 @@
     `;
     wrapperEl.appendChild(arrowEl);
 
-    // Pulsante mirino GPS manuale (non sposta la mappa finché non lo premi)
+    // Controllo geolocalizzazione manuale
     const geolocate = new maplibregl.GeolocateControl({
       positionOptions: {
         enableHighAccuracy: true,
@@ -467,7 +461,7 @@
       lastCoords = [lon, lat];
 
       if (typeof heading === 'number' && !Number.isNaN(heading)) {
-        lastHeading = ((heading % 360) + 360) % 360;
+        lastHeading = normalizeAngle(heading);
       }
 
       if (!navMarker) {
@@ -484,7 +478,6 @@
         navMarker.setRotation(lastHeading);
       }
 
-      // Sposta la camera solo se l'utente ha attivato Course-Up
       if (courseUpEnabled) {
         moveCameraSafe({
           center: lastCoords,
@@ -501,7 +494,6 @@
       updateNavigationView([longitude, latitude], heading);
     });
 
-    // Tracciamento GPS in background: aggiorna la freccia senza spostare l'inquadratura iniziale
     function startBackgroundTracking() {
       if (!('geolocation' in navigator)) return;
       navigator.geolocation.watchPosition(
@@ -518,20 +510,29 @@
       );
     }
 
-    window.addEventListener('deviceorientationabsolute', (e) => {
-      if (typeof e.alpha === 'number' && !Number.isNaN(e.alpha) && lastCoords && courseUpEnabled) {
-        const compassHeading = (360 - e.alpha) % 360;
+    function handleCompassEvent(e) {
+      let compassHeading = null;
+
+      if (typeof e.webkitCompassHeading === 'number' && !Number.isNaN(e.webkitCompassHeading)) {
+        compassHeading = normalizeAngle(e.webkitCompassHeading);
+      } else if (typeof e.alpha === 'number' && !Number.isNaN(e.alpha)) {
+        const screenAngle = (screen.orientation && typeof screen.orientation.angle === 'number')
+          ? screen.orientation.angle
+          : (typeof window.orientation === 'number' ? window.orientation : 0);
+        compassHeading = normalizeAngle(360 - e.alpha + screenAngle);
+      }
+
+      if (compassHeading !== null && lastCoords) {
         updateNavigationView(lastCoords, compassHeading);
       }
-    });
+    }
 
-    window.addEventListener('deviceorientation', (e) => {
-      if (typeof e.webkitCompassHeading === 'number' && !Number.isNaN(e.webkitCompassHeading) && lastCoords && courseUpEnabled) {
-        updateNavigationView(lastCoords, e.webkitCompassHeading);
-      }
-    });
+    window.addEventListener('deviceorientationabsolute', handleCompassEvent);
+    window.addEventListener('deviceorientation', handleCompassEvent);
 
     map.on('load', () => {
+      fitTerritorio(false);
+
       map.addSource('territorio-03', {
         type: 'geojson',
         data: territorio03GeoJSON
@@ -547,8 +548,8 @@
         },
         paint: {
           'line-color': '#0066ff',
-          'line-width': ['coalesce', ['get', 'weight', ['get', '_umap_options']], 5],
-          'line-opacity': ['coalesce', ['get', 'opacity', ['get', '_umap_options']], 1]
+          'line-width': ['coalesce', ['get', 'weight'], 5],
+          'line-opacity': ['coalesce', ['get', 'opacity'], 1]
         }
       });
 
