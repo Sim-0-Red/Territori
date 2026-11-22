@@ -520,12 +520,47 @@
       }
     });
 
+    // Calcola automaticamente l'inquadratura del GeoJSON
+    function fitGeoJsonBounds(geojson) {
+      const bounds = new maplibregl.LngLatBounds();
+      function extendCoords(coords) {
+        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+          bounds.extend(coords);
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extendCoords);
+        }
+      }
+      if (geojson && Array.isArray(geojson.features)) {
+        geojson.features.forEach((f) => {
+          if (f.geometry && f.geometry.coordinates) {
+            extendCoords(f.geometry.coordinates);
+          }
+        });
+      }
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, { padding: 40, duration: 0 });
+      }
+    }
+
     map.on('load', () => {
       map.addSource('territorio-source', {
         type: 'geojson',
         data: territorioGeoJson
       });
 
+      // Riempimento leggero per eventuali Poligoni nel GeoJSON
+      map.addLayer({
+        id: 'territorio-fill-layer',
+        type: 'fill',
+        source: 'territorio-source',
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: {
+          'fill-color': '#0066ff',
+          'fill-opacity': 0.15
+        }
+      });
+
+      // Bordo blu per LineString e Poligoni
       map.addLayer({
         id: 'territorio-confine-layer',
         type: 'line',
@@ -537,6 +572,7 @@
         }
       });
 
+      fitGeoJsonBounds(territorioGeoJson);
       requestFastInitialPosition();
       geolocate.trigger();
     });
