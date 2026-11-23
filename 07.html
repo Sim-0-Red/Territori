@@ -11,7 +11,7 @@
   <meta property="og:image:height" content="630" />
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Territorio 07 – Mappa Base con Navigatore Course-Up</title>
+  <title>Territorio 07 - Torino San Maurizio</title>
   <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5/dist/maplibre-gl.js"></script>
   <style>
@@ -146,6 +146,28 @@
       ]
     };
 
+    function getGeoJSONBounds(geojson) {
+      const bounds = new maplibregl.LngLatBounds();
+      geojson.features.forEach((feature) => {
+        const geom = feature.geometry;
+        if (!geom) return;
+        if (geom.type === 'Point') {
+          bounds.extend(geom.coordinates);
+        } else if (geom.type === 'LineString' || geom.type === 'MultiPoint') {
+          geom.coordinates.forEach((coord) => bounds.extend(coord));
+        } else if (geom.type === 'Polygon' || geom.type === 'MultiLineString') {
+          geom.coordinates.forEach((ring) => ring.forEach((coord) => bounds.extend(coord)));
+        } else if (geom.type === 'MultiPolygon') {
+          geom.coordinates.forEach((poly) =>
+            poly.forEach((ring) => ring.forEach((coord) => bounds.extend(coord)))
+          );
+        }
+      });
+      return bounds;
+    }
+
+    const territoryBounds = getGeoJSONBounds(territorio07GeoJSON);
+
     const map = new maplibregl.Map({
       container: 'map',
       style: {
@@ -168,7 +190,7 @@
           }
         ]
       },
-      // Centro e zoom presi dal file uMap (Territorio 07)
+      // Centro e zoom presi dal file uMap (Territorio 07), poi adattati al perimetro in fitBounds
       center: [7.699056142627866, 45.06804451243763], //[cite: 1]
       zoom: 16, //[cite: 1]
       pitch: PITCH_2D
@@ -439,6 +461,17 @@
           'line-opacity': 1 //[cite: 1]
         }
       });
+
+      if (!territoryBounds.isEmpty()) {
+        isProgrammaticMove = true;
+        map.fitBounds(territoryBounds, {
+          padding: 50,
+          duration: 0
+        });
+        map.once('moveend', () => {
+          isProgrammaticMove = false;
+        });
+      }
 
       startBackgroundTracking();
     });
