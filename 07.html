@@ -3,7 +3,7 @@
 <head>
 <!-- Tag Open Graph per anteprima link -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Territorio 07 – Torino San Maurizio" />
+  <meta property="og:title" content="Territorio 07 – Mappa Interattiva" />
   <meta property="og:description" content="Mappa interattiva con confini e navigatore Course-Up" />
   <meta property="og:image" content="https://sim-0-red.github.io/Territori/anteprima.jpg" />
   <meta property="og:image:type" content="image/jpeg" />
@@ -125,21 +125,21 @@
           type: 'Feature',
           id: 'E3OTk',
           properties: {
-            name: 'Territorio 07',[cite: 1]
-            opacity: 1,[cite: 1]
-            weight: 5[cite: 1]
+            name: 'Territorio 07',
+            opacity: 1,
+            weight: 5
           },
           geometry: {
             type: 'LineString',
             coordinates: [
-              [7.699197, 45.069328],[cite: 1]
-              [7.701537, 45.067814],[cite: 1]
-              [7.702632, 45.067148],[cite: 1]
-              [7.699004, 45.065512],[cite: 1]
-              [7.698328, 45.066239],[cite: 1]
-              [7.697448, 45.067095],[cite: 1]
-              [7.696944, 45.067632],[cite: 1]
-              [7.699133, 45.069305][cite: 1]
+              [7.699197, 45.069328],
+              [7.701537, 45.067814],
+              [7.702632, 45.067148],
+              [7.699004, 45.065512],
+              [7.698328, 45.066239],
+              [7.697448, 45.067095],
+              [7.696944, 45.067632],
+              [7.699133, 45.069305]
             ]
           }
         }
@@ -190,9 +190,9 @@
           }
         ]
       },
-      // Centro e zoom presi dal file uMap (Territorio 07), poi adattati al perimetro in fitBounds
-      center: [7.699056142627866, 45.06804451243763],[cite: 1]
-      zoom: 16,[cite: 1]
+      // Centro e zoom iniziali, poi adattati al perimetro in fitBounds
+      center: [7.699056142627866, 45.06804451243763],
+      zoom: 16,
       pitch: PITCH_2D
     });
 
@@ -457,8 +457,8 @@
         },
         paint: {
           'line-color': '#0066ff',
-          'line-width': 5,[cite: 1]
-          'line-opacity': 1[cite: 1]
+          'line-width': 5,
+          'line-opacity': 1
         }
       });
 
