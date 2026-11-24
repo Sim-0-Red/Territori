@@ -160,6 +160,52 @@
       ]
     };
 
+    // Estrae tutte le coordinate [lon, lat] da un GeoJSON per calcolare l'inquadratura completa
+    function extractCoords(geojson) {
+      const coords = [];
+      function walk(node) {
+        if (!node) return;
+        if (Array.isArray(node)) {
+          if (node.length >= 2 && typeof node[0] === 'number' && typeof node[1] === 'number') {
+            coords.push([node[0], node[1]]);
+          } else {
+            for (const item of node) walk(item);
+          }
+        } else if (typeof node === 'object') {
+          if (node.type === 'FeatureCollection' && Array.isArray(node.features)) {
+            node.features.forEach(walk);
+          } else if (node.type === 'Feature') {
+            walk(node.geometry);
+          } else if (node.coordinates) {
+            walk(node.coordinates);
+          }
+        }
+      }
+      walk(geojson);
+      return coords;
+    }
+
+    function fitBoundsToGeoJSON(mapInstance, geojson, animate = false) {
+      const points = extractCoords(geojson);
+      if (!points.length) return;
+
+      const bounds = new maplibregl.LngLatBounds(points[0], points[0]);
+      for (const pt of points) {
+        bounds.extend(pt);
+      }
+
+      const isMobile = window.innerWidth < 768;
+      const padding = isMobile
+        ? { top: 65, bottom: 55, left: 35, right: 35 }
+        : { top: 75, bottom: 65, left: 75, right: 95 };
+
+      mapInstance.fitBounds(bounds, {
+        padding,
+        maxZoom: 18,
+        duration: animate ? 500 : 0
+      });
+    }
+
     const map = new maplibregl.Map({
       container: 'map',
       style: {
@@ -452,6 +498,9 @@
           'line-opacity': 1
         }
       });
+
+      // Zoom automatico iniziale per inquadrare tutto il confine su PC e smartphone
+      fitBoundsToGeoJSON(map, territorio25GeoJSON, false);
 
       startBackgroundTracking();
     });
