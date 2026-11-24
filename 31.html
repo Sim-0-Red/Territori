@@ -10,8 +10,8 @@
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mappa con Confini Blu e Navigatore Course-Up</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Territorio 31 – Torino Scarlatti</title>
   <style>
     html, body, #map {
       margin: 0;
@@ -20,6 +20,7 @@
       height: 100%;
       background: #e5e7eb;
       font-family: system-ui, -apple-system, sans-serif;
+      touch-action: none;
     }
 
     .nav-marker-wrapper {
@@ -75,6 +76,40 @@
     .view-mode-btn.is-3d {
       background: #1e293b;
       color: #ffffff;
+    }
+
+    /* Controlli zoom + / - compatibili con Course-Up */
+    .zoom-step-group {
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      border-radius: 4px;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12);
+      overflow: hidden;
+    }
+
+    .zoom-step-btn {
+      width: 32px;
+      height: 32px;
+      background: #ffffff;
+      border: none;
+      cursor: pointer;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1;
+      color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .zoom-step-btn + .zoom-step-btn {
+      border-top: 1px solid rgba(0, 0, 0, 0.12);
+    }
+
+    .zoom-step-btn:active {
+      background: #e2e8f0;
     }
 
     #err-box {
@@ -231,6 +266,7 @@
       .then((maplibregl) => {
         const PITCH_2D = 0;
         const PITCH_3D = 60;
+        const ZOOM_STEP = 0.8;
         let is3DMode = false;
 
         function getTargetPitch() {
@@ -292,13 +328,40 @@
         let lastHeading = 0;
         let lastCoords = null;
         let isProgrammaticMove = false;
+        let moveResetTimer = null;
+        let isUserPinchingOrZooming = false;
+        let activeTouchCount = 0;
 
         function moveCameraSafe(options) {
+          if (isUserPinchingOrZooming) return;
           isProgrammaticMove = true;
+          if (moveResetTimer) clearTimeout(moveResetTimer);
           map.easeTo(options);
           map.once('moveend', () => {
-            isProgrammaticMove = false;
+            moveResetTimer = setTimeout(() => {
+              isProgrammaticMove = false;
+            }, 60);
           });
+        }
+
+        function stepZoom(delta) {
+          const currentZoom = map.getZoom();
+          const minZoom = map.getMinZoom();
+          const maxZoom = map.getMaxZoom();
+          const nextZoom = Math.min(maxZoom, Math.max(minZoom, currentZoom + delta));
+
+          const cameraOptions = {
+            zoom: nextZoom,
+            pitch: getTargetPitch(),
+            duration: 220
+          };
+
+          if (courseUpEnabled) {
+            cameraOptions.center = lastCoords || map.getCenter();
+            cameraOptions.bearing = lastHeading;
+          }
+
+          moveCameraSafe(cameraOptions);
         }
 
         async function requestCompassPermissionIfNeeded() {
@@ -311,6 +374,47 @@
             } catch (_) {}
           }
         }
+
+        class ZoomStepControl {
+          onAdd(map) {
+            this._map = map;
+            this._container = document.createElement('div');
+            this._container.className = 'maplibregl-ctrl zoom-step-group';
+
+            const plusBtn = document.createElement('button');
+            plusBtn.type = 'button';
+            plusBtn.className = 'zoom-step-btn';
+            plusBtn.textContent = '+';
+            plusBtn.title = 'Zoom avanti';
+            plusBtn.setAttribute('aria-label', 'Zoom avanti');
+            plusBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              stepZoom(ZOOM_STEP);
+            });
+
+            const minusBtn = document.createElement('button');
+            minusBtn.type = 'button';
+            minusBtn.className = 'zoom-step-btn';
+            minusBtn.textContent = '−';
+            minusBtn.title = 'Zoom indietro';
+            minusBtn.setAttribute('aria-label', 'Zoom indietro');
+            minusBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              stepZoom(-ZOOM_STEP);
+            });
+
+            this._container.appendChild(plusBtn);
+            this._container.appendChild(minusBtn);
+            return this._container;
+          }
+
+          onRemove() {
+            this._container.parentNode.removeChild(this._container);
+            this._map = undefined;
+          }
+        }
+
+        map.addControl(new ZoomStepControl(), 'top-right');
 
         class ViewModeControl {
           onAdd(map) {
@@ -419,8 +523,48 @@
         const courseUpCtrl = new CourseUpControl();
         map.addControl(courseUpCtrl, 'top-right');
 
-        map.on('dragstart', () => {
-          if (!isProgrammaticMove && courseUpEnabled) {
+        const mapContainer = map.getCanvasContainer();
+        mapContainer.addEventListener('touchstart', (ev) => {
+          activeTouchCount = ev.touches.length;
+          if (activeTouchCount >= 2) {
+            isUserPinchingOrZooming = true;
+          }
+        }, { passive: true });
+
+        mapContainer.addEventListener('touchmove', (ev) => {
+          activeTouchCount = ev.touches.length;
+          if (activeTouchCount >= 2) {
+            isUserPinchingOrZooming = true;
+          }
+        }, { passive: true });
+
+        mapContainer.addEventListener('touchend', (ev) => {
+          activeTouchCount = ev.touches.length;
+          if (activeTouchCount < 2) {
+            setTimeout(() => {
+              isUserPinchingOrZooming = false;
+            }, 120);
+          }
+        }, { passive: true });
+
+        map.on('zoomstart', (ev) => {
+          if (!isProgrammaticMove && ev && ev.originalEvent) {
+            isUserPinchingOrZooming = true;
+          }
+        });
+
+        map.on('zoomend', () => {
+          if (activeTouchCount < 2) {
+            setTimeout(() => {
+              isUserPinchingOrZooming = false;
+            }, 120);
+          }
+        });
+
+        map.on('dragstart', (ev) => {
+          if (isProgrammaticMove || !courseUpEnabled) return;
+          if (isUserPinchingOrZooming || activeTouchCount >= 2) return;
+          if (ev && ev.originalEvent) {
             courseUpEnabled = false;
             courseUpCtrl.updateUI();
           }
@@ -475,10 +619,11 @@
             navMarker.setRotation(lastHeading);
           }
 
-          if (courseUpEnabled) {
+          if (courseUpEnabled && !isUserPinchingOrZooming) {
             moveCameraSafe({
               center: lastCoords,
               bearing: lastHeading,
+              zoom: map.getZoom(),
               pitch: getTargetPitch(),
               duration: 300,
               easing: (t) => t
