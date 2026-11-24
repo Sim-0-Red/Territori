@@ -3,19 +3,19 @@
 <head>
 <!-- Tag Open Graph per anteprima link -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Territorio 116 – Torino Regio Parco" />
+  <meta property="og:title" content="Territorio A116 - Torino Regio Parco" />
   <meta property="og:description" content="Mappa interattiva con confini e navigatore Course-Up" />
   <meta property="og:image" content="https://sim-0-red.github.io/Territori/anteprima.jpg" />
   <meta property="og:image:type" content="image/jpeg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Mappa con Confini Blu e Navigatore Course-Up</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Territorio A116 - Torino Regio Parco</title>
   <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5/dist/maplibre-gl.js"></script>
   <style>
-    html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; touch-action: none; }
+    html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
 
     .nav-marker-wrapper {
       width: 36px;
@@ -108,6 +108,44 @@
       }
     });
 
+    const territorioGeoJson = {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "id": "ggdks",
+          "geometry": {
+            "type": "LineString",
+            "coordinates": [
+              [7.692876, 45.081184],
+              [7.694588, 45.080551],
+              [7.695301, 45.079953],
+              [7.696138, 45.07901],
+              [7.696658, 45.078438],
+              [7.696717, 45.078214],
+              [7.696605, 45.077983],
+              [7.694743, 45.07715],
+              [7.692232, 45.076059],
+              [7.690762, 45.077911],
+              [7.689496, 45.07954],
+              [7.689362, 45.079684],
+              [7.690553, 45.080229],
+              [7.691884, 45.080813],
+              [7.692742, 45.081191],
+              [7.692892, 45.08118]
+            ]
+          },
+          "properties": {
+            "_umap_options": {
+              "color": "Navy",
+              "opacity": 1,
+              "weight": 6
+            }
+          }
+        }
+      ]
+    };
+
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
     const PITCH_3D = 60;
@@ -115,54 +153,6 @@
 
     function getTargetPitch() {
       return is3DMode ? PITCH_3D : PITCH_2D;
-    }
-
-    // Inserisci qui i dati GeoJSON del confine quando disponibili
-    const confineGeoJSON = null;
-
-    function extractCoords(geojson) {
-      const coords = [];
-      function walk(node) {
-        if (!node) return;
-        if (Array.isArray(node)) {
-          if (node.length >= 2 && typeof node[0] === 'number' && typeof node[1] === 'number') {
-            coords.push([node[0], node[1]]);
-          } else {
-            for (const item of node) walk(item);
-          }
-        } else if (typeof node === 'object') {
-          if (node.type === 'FeatureCollection' && Array.isArray(node.features)) {
-            node.features.forEach(walk);
-          } else if (node.type === 'Feature') {
-            walk(node.geometry);
-          } else if (node.coordinates) {
-            walk(node.coordinates);
-          }
-        }
-      }
-      walk(geojson);
-      return coords;
-    }
-
-    function fitBoundsToGeoJSON(mapInstance, geojson, animate = false) {
-      const points = extractCoords(geojson);
-      if (!points.length) return;
-
-      const bounds = new maplibregl.LngLatBounds(points[0], points[0]);
-      for (const pt of points) {
-        bounds.extend(pt);
-      }
-
-      const isMobile = window.innerWidth < 768;
-      const padding = isMobile
-        ? { top: 65, bottom: 55, left: 35, right: 35 }
-        : { top: 75, bottom: 65, left: 75, right: 95 };
-
-      mapInstance.fitBounds(bounds, {
-        padding,
-        maxZoom: 18,
-        duration: animate ? 500 : 0
-      });
     }
 
     const map = new maplibregl.Map({
@@ -187,8 +177,8 @@
           }
         ]
       },
-      center: [7.6869, 45.0703],
-      zoom: 13,
+      center: [7.693552194799645, 45.078528580515986],
+      zoom: 16,
       pitch: PITCH_2D
     });
 
@@ -200,19 +190,12 @@
     let lastHeading = 0;
     let lastCoords = null;
     let isProgrammaticMove = false;
-    let moveResetTimer = null;
-    let isUserPinchingOrZooming = false;
-    let activeTouchCount = 0;
 
     function moveCameraSafe(options) {
-      if (isUserPinchingOrZooming) return;
       isProgrammaticMove = true;
-      if (moveResetTimer) clearTimeout(moveResetTimer);
       map.easeTo(options);
       map.once('moveend', () => {
-        moveResetTimer = setTimeout(() => {
-          isProgrammaticMove = false;
-        }, 60);
+        isProgrammaticMove = false;
       });
     }
 
@@ -337,50 +320,9 @@
     const courseUpCtrl = new CourseUpControl();
     map.addControl(courseUpCtrl, 'top-right');
 
-    // Traccia il numero di dita sullo schermo per distinguere pinch/zoom da pan manuale
-    const mapContainer = map.getCanvasContainer();
-    mapContainer.addEventListener('touchstart', (ev) => {
-      activeTouchCount = ev.touches.length;
-      if (activeTouchCount >= 2) {
-        isUserPinchingOrZooming = true;
-      }
-    }, { passive: true });
-
-    mapContainer.addEventListener('touchmove', (ev) => {
-      activeTouchCount = ev.touches.length;
-      if (activeTouchCount >= 2) {
-        isUserPinchingOrZooming = true;
-      }
-    }, { passive: true });
-
-    mapContainer.addEventListener('touchend', (ev) => {
-      activeTouchCount = ev.touches.length;
-      if (activeTouchCount < 2) {
-        setTimeout(() => {
-          isUserPinchingOrZooming = false;
-        }, 120);
-      }
-    }, { passive: true });
-
-    map.on('zoomstart', (ev) => {
-      if (!isProgrammaticMove && ev && ev.originalEvent) {
-        isUserPinchingOrZooming = true;
-      }
-    });
-
-    map.on('zoomend', () => {
-      if (activeTouchCount < 2) {
-        setTimeout(() => {
-          isUserPinchingOrZooming = false;
-        }, 120);
-      }
-    });
-
     // Se l'utente sposta o ruota manualmente la mappa con le dita, mette in pausa Course-Up
-    map.on('dragstart', (ev) => {
-      if (isProgrammaticMove || !courseUpEnabled) return;
-      if (isUserPinchingOrZooming || activeTouchCount >= 2) return;
-      if (ev && ev.originalEvent) {
+    map.on('dragstart', () => {
+      if (!isProgrammaticMove && courseUpEnabled) {
         courseUpEnabled = false;
         courseUpCtrl.updateUI();
       }
@@ -437,8 +379,8 @@
         navMarker.setRotation(lastHeading);
       }
 
-      // Sposta la camera solo se l'utente ha attivato Course-Up e non sta facendo pinch-to-zoom con le dita
-      if (courseUpEnabled && !isUserPinchingOrZooming) {
+      // Sposta la camera solo se l'utente ha attivato Course-Up
+      if (courseUpEnabled) {
         moveCameraSafe({
           center: lastCoords,
           bearing: lastHeading,
@@ -484,40 +426,59 @@
       }
     });
 
-    map.on('load', () => {
-      if (confineGeoJSON) {
-        map.addSource('confine-source', {
-          type: 'geojson',
-          data: confineGeoJSON
-        });
-
-        // Riempimento leggero per eventuali Poligoni nel GeoJSON
-        map.addLayer({
-          id: 'confine-fill-layer',
-          type: 'fill',
-          source: 'confine-source',
-          filter: ['==', ['geometry-type'], 'Polygon'],
-          paint: {
-            'fill-color': '#0066ff',
-            'fill-opacity': 0.15
-          }
-        });
-
-        // Bordo blu per LineString e Poligoni
-        map.addLayer({
-          id: 'confine-line',
-          type: 'line',
-          source: 'confine-source',
-          paint: {
-            'line-color': '#0066ff',
-            'line-width': 5,
-            'line-opacity': 1
-          }
-        });
-
-        fitBoundsToGeoJSON(map, confineGeoJSON, false);
+    // Calcola automaticamente l'inquadratura del GeoJSON
+    function fitGeoJsonBounds(geojson) {
+      const bounds = new maplibregl.LngLatBounds();
+      function extendCoords(coords) {
+        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+          bounds.extend(coords);
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extendCoords);
+        }
       }
+      if (geojson && Array.isArray(geojson.features)) {
+        geojson.features.forEach((f) => {
+          if (f.geometry && f.geometry.coordinates) {
+            extendCoords(f.geometry.coordinates);
+          }
+        });
+      }
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, { padding: 40, duration: 0 });
+      }
+    }
 
+    map.on('load', () => {
+      map.addSource('territorio-source', {
+        type: 'geojson',
+        data: territorioGeoJson
+      });
+
+      // Riempimento leggero per eventuali Poligoni nel GeoJSON
+      map.addLayer({
+        id: 'territorio-fill-layer',
+        type: 'fill',
+        source: 'territorio-source',
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: {
+          'fill-color': '#0066ff',
+          'fill-opacity': 0.15
+        }
+      });
+
+      // Bordo blu per LineString e Poligoni
+      map.addLayer({
+        id: 'territorio-confine-layer',
+        type: 'line',
+        source: 'territorio-source',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
+      });
+
+      fitGeoJsonBounds(territorioGeoJson);
       startBackgroundTracking();
     });
   </script>
