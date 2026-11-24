@@ -548,44 +548,38 @@
       return { docTitle, ogTitle };
     }
 
-    function extractAssignedJson(htmlText, varNames) {
-      for (const name of varNames) {
-        const re = new RegExp(`\\b(?:const|let|var)\\s+${name}\\s*=\\s*`, 'm');
-        const m = re.exec(htmlText);
-        if (!m) continue;
+    function parseObjectAt(htmlText, startIdx) {
+      let idx = startIdx;
+      while (idx < htmlText.length && /\s/.test(htmlText[idx])) idx++;
+      if (idx >= htmlText.length || (htmlText[idx] !== '{' && htmlText[idx] !== '[')) return null;
 
-        let idx = m.index + m[0].length;
-        while (idx < htmlText.length && /\s/.test(htmlText[idx])) idx++;
-        if (idx >= htmlText.length || (htmlText[idx] !== '{' && htmlText[idx] !== '[')) continue;
+      const start = idx;
+      let depth = 0;
+      let inStr = null;
+      let esc = false;
 
-        const start = idx;
-        let depth = 0;
-        let inStr = null;
-        let esc = false;
-
-        for (let i = start; i < htmlText.length; i++) {
-          const ch = htmlText[i];
-          if (esc) { esc = false; continue; }
-          if (ch === '\\' && inStr) { esc = true; continue; }
-          if (ch === '"' || ch === "'" || ch === '`') {
-            if (!inStr) inStr = ch;
-            else if (inStr === ch) inStr = null;
-            continue;
-          }
-          if (inStr) continue;
-          if (ch === '{' || ch === '[') depth++;
-          else if (ch === '}' || ch === ']') {
-            depth--;
-            if (depth === 0) {
-              const raw = htmlText.slice(start, i + 1);
+      for (let i = start; i < htmlText.length; i++) {
+        const ch = htmlText[i];
+        if (esc) { esc = false; continue; }
+        if (ch === '\\' && inStr) { esc = true; continue; }
+        if (ch === '"' || ch === "'" || ch === '`') {
+          if (!inStr) inStr = ch;
+          else if (inStr === ch) inStr = null;
+          continue;
+        }
+        if (inStr) continue;
+        if (ch === '{' || ch === '[') depth++;
+        else if (ch === '}' || ch === ']') {
+          depth--;
+          if (depth === 0) {
+            const raw = htmlText.slice(start, i + 1);
+            try {
+              return JSON.parse(raw);
+            } catch (_) {
               try {
-                return JSON.parse(raw);
-              } catch (_) {
-                try {
-                  return (new Function(`return (${raw});`))();
-                } catch (err) {
-                  return null;
-                }
+                return (new Function(`return (${raw});`))();
+              } catch (err) {
+                return null;
               }
             }
           }
@@ -594,9 +588,80 @@
       return null;
     }
 
+    function extractGeoJson(htmlText) {
+      const varRe = /\b(?:const|let|var)\s+([A-Za-z0-9_]*geojson[A-Za-z0-9_]*)\s*=\s*/gi;
+      let match;
+      while ((match = varRe.exec(htmlText)) !== null) {
+        const parsed = parseObjectAt(htmlText, match.index + match[0].length);
+        if (parsed && (parsed.type === 'FeatureCollection' || parsed.type === 'Feature' || Array.isArray(parsed.features))) {
+          return parsed;
+        }
+      }
+
+      const fcIdx = htmlText.indexOf('"FeatureCollection"');
+      if (fcIdx !== -1) {
+        let braceIdx = htmlText.lastIndexOf('{', fcIdx);
+        while (braceIdx !== -1) {
+          const parsed = parseObjectAt(htmlText, braceIdx);
+          if (parsed && parsed.type === 'FeatureCollection' && Array.isArray(parsed.features)) {
+            return parsed;
+          }
+          braceIdx = htmlText.lastIndexOf('{', braceIdx - 1);
+        }
+      }
+
+      return null;
+    }
+
+    function computeBoundsCenter(geojson) {
+      let minLon = Infinity, minLat = Infinity, maxLon = -Infinity, maxLat = -Infinity;
+      function walk(coords) {
+        if (!Array.isArray(coords)) return;
+        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+          const [lon, lat] = coords;
+          if (lon < minLon) minLon = lon;
+          if (lat < minLat) minLat = lat;
+          if (lon > maxLon) maxLon = lon;
+          if (lat > maxLat) maxLat = lat;
+          return;
+        }
+        for (const c of coords) walk(c);
+      }
+      if (geojson && Array.isArray(geojson.features)) {
+        for (const f of geojson.features) {
+          if (f && f.geometry) walk(f.geometry.coordinates);
+        }
+      }
+      if (Number.isFinite(minLon) && Number.isFinite(minLat)) {
+        return [(minLon + maxLon) / 2, (minLat + maxLat) / 2];
+      }
+      return null;
+    }
+
+    function extractCenter(htmlText, geojson) {
+      const centerVar = /\b(?:const|let|var)\s+center\s*=\s*/m.exec(htmlText);
+      if (centerVar) {
+        const parsed = parseObjectAt(htmlText, centerVar.index + centerVar[0].length);
+        if (Array.isArray(parsed) && parsed.length === 2) return parsed;
+      }
+
+      const propMatch = htmlText.match(/\bcenter\s*:\s*(\[[^\]]+\])/);
+      if (propMatch) {
+        try {
+          const arr = JSON.parse(propMatch[1]);
+          if (Array.isArray(arr) && arr.length === 2) return arr;
+        } catch (_) {}
+      }
+
+      const computed = computeBoundsCenter(geojson);
+      if (computed) return computed;
+
+      return [7.6858, 45.0678];
+    }
+
     function extractZoom(htmlText) {
       const m = htmlText.match(/\bzoom\s*:\s*([0-9]+(?:\.[0-9]+)?)/);
-      return m ? Number(m[1]) : 16;
+      return m ? Number(m[1]) : 15;
     }
 
     fileInput.addEventListener('change', () => {
@@ -616,19 +681,15 @@
           const src = await file.text();
           const fallbackName = file.name.replace(/\.html?$/i, '');
           const { docTitle, ogTitle } = extractTitles(src, fallbackName);
-          const geojson = extractAssignedJson(src, ['territorioGeoJson', 'territorioGeoJSON', 'confineGeoJSON', 'confineGeoJson']);
-          let center = extractAssignedJson(src, ['center']);
+          const geojson = extractGeoJson(src);
 
-          if (!center) {
-            const cm = src.match(/\bcenter\s*:\s*(\[[^\]]+\])/);
-            if (cm) center = JSON.parse(cm[1]);
-          }
-          const zoom = extractZoom(src);
-
-          if (!geojson || !center) {
-            log(`[ERRORE] ${file.name}: geojson o center non trovati`);
+          if (!geojson) {
+            log(`[ERRORE] ${file.name}: geojson non trovato`);
             continue;
           }
+
+          const center = extractCenter(src, geojson);
+          const zoom = extractZoom(src);
 
           const outContent = BASE_TEMPLATE
             .replace('__OG_TITLE__', escapeAttr(ogTitle))
@@ -639,7 +700,7 @@
 
           updatedFiles.push({ name: file.name, content: outContent });
           ok++;
-          log(`[OK] ${file.name} -> title: "${docTitle}"`);
+          log(`[OK] ${file.name} -> og:title: "${ogTitle}" | title: "${docTitle}"`);
         } catch (err) {
           log(`[ERRORE] ${file.name}: ${err.message}`);
         }
