@@ -138,7 +138,7 @@
           }
         }
       ]
-    };
+    };[cite: 2]
 
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
@@ -148,6 +148,8 @@
     function getTargetPitch() {
       return is3DMode ? PITCH_3D : PITCH_2D;
     }
+
+    const isMobile = window.innerWidth <= 768;
 
     const map = new maplibregl.Map({
       container: 'map',
@@ -203,8 +205,8 @@
           }
         ]
       },
-      center: [7.698431444816186, 45.0767933397974],
-      zoom: 16,
+      center: [7.698026, 45.076981],
+      zoom: isMobile ? 15.1 : 15.6,
       pitch: PITCH_2D
     });
 
