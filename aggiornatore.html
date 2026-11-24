@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aggiornatore di gruppo HTML MapLibre</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 720px;
+      margin: 40px auto;
+      padding: 0 20px;
+      line-height: 1.5;
+      color: #1e293b;
+      background: #f8fafc;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    button {
+      background: #0066ff;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 12px;
+      margin-right: 8px;
+    }
+    button:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+    #log {
+      margin-top: 18px;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 14px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 260px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Aggiorna i tuoi file HTML senza installare nulla</h1>
+    <p>Seleziona tutti i tuoi file <code>.html</code> esistenti. Per ciascun file verranno mantenuti il titolo originale (<code>&lt;title&gt;</code> e <code>og:title</code>), le coordinate, lo zoom e il GeoJSON, applicando la nuova base.</p>
+
+    <input id="fileInput" type="file" accept=".html,text/html" multiple />
+    <div>
+      <button id="processBtn" disabled>Elabora file selezionati</button>
+      <button id="downloadAllBtn" disabled>Scarica tutti i file aggiornati</button>
+    </div>
+
+    <div id="log">In attesa di selezionare i file...</div>
+  </div>
+
+  <script>
+    const BASE_TEMPLATE = `<!DOCTYPE html>
+<html lang="it">
+<head>
+<!-- Tag Open Graph per anteprima link -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="__OG_TITLE__" />
+  <meta property="og:description" content="Mappa interattiva con confini e navigatore Course-Up" />
+  <meta property="og:image" content="https://sim-0-red.github.io/Territori/anteprima.jpg" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>__DOC_TITLE__</title>
+  <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5/dist/maplibre-gl.js"><\/script>
+  <style>
+    html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
+
+    .nav-marker-wrapper {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .nav-arrow {
+      width: 32px;
+      height: 32px;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+    }
+
+    /* Pulsante per attivare/disattivare Course-Up */
+    .course-up-btn {
+      background: #ffffff;
+      border: none;
+      border-radius: 4px;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      padding: 6px 10px;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .course-up-btn.active {
+      background: #0066ff;
+      color: #ffffff;
+    }
+
+    /* Pulsante per alternare vista 2D / 3D */
+    .view-mode-btn {
+      background: #ffffff;
+      border: none;
+      border-radius: 4px;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      padding: 6px 10px;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .view-mode-btn.is-3d {
+      background: #1e293b;
+      color: #ffffff;
+    }
+
+    #err-box {
+      display: none;
+      position: fixed;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      z-index: 9999;
+      background: #fff3f3;
+      color: #900;
+      border: 2px solid #c00;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 35vh;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="err-box"></div>
+  <script>
+    window.addEventListener('error', (ev) => {
+      const box = document.getElementById('err-box');
+      if (box) {
+        box.style.display = 'block';
+        box.textContent += (box.textContent ? '\\n' : '') + (ev.message || 'Errore');
+      }
+    });
+
+    const territorioGeoJson = __GEOJSON__;
+
+    // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
+    const PITCH_2D = 0;
+    const PITCH_3D = 60;
+    let is3DMode = false;
+
+    function getTargetPitch() {
+      return is3DMode ? PITCH_3D : PITCH_2D;
+    }
+
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: {
+        version: 8,
+        sources: {
+          esriStreet: {
+            type: 'raster',
+            tiles: [
+              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'
+            ],
+            tileSize: 256,
+            attribution: '© Esri, OpenStreetMap contributors'
+          }
+        },
+        layers: [
+          {
+            id: 'esri-street-layer',
+            type: 'raster',
+            source: 'esriStreet'
+          }
+        ]
+      },
+      center: __CENTER__,
+      zoom: __ZOOM__,
+      pitch: PITCH_2D
+    });
+
+    map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
+
+    // Stato Course-Up disattivato di default all'apertura
+    let courseUpEnabled = false;
+    let navMarker = null;
+    let lastHeading = 0;
+    let lastCoords = null;
+    let isProgrammaticMove = false;
+
+    function moveCameraSafe(options) {
+      isProgrammaticMove = true;
+      map.easeTo(options);
+      map.once('moveend', () => {
+        isProgrammaticMove = false;
+      });
+    }
+
+    async function requestCompassPermissionIfNeeded() {
+      if (
+        typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function'
+      ) {
+        try {
+          await DeviceOrientationEvent.requestPermission();
+        } catch (_) {}
+      }
+    }
+
+    // Controllo per passare da 2D a 3D mantenendo lo stato Course-Up
+    class ViewModeControl {
+      onAdd(map) {
+        this._map = map;
+        this._container = document.createElement('div');
+        this._container.className = 'maplibregl-ctrl';
+
+        this._btn = document.createElement('button');
+        this._btn.type = 'button';
+        this._btn.className = 'view-mode-btn';
+        this._btn.textContent = '2D';
+        this._btn.title = 'Passa tra vista 2D e vista 3D';
+
+        this._btn.addEventListener('click', () => {
+          is3DMode = !is3DMode;
+          this.updateUI();
+
+          const cameraOptions = {
+            pitch: getTargetPitch(),
+            duration: 450
+          };
+
+          if (courseUpEnabled && lastCoords) {
+            cameraOptions.center = lastCoords;
+            cameraOptions.bearing = lastHeading;
+          }
+
+          moveCameraSafe(cameraOptions);
+        });
+
+        this._container.appendChild(this._btn);
+        return this._container;
+      }
+
+      updateUI() {
+        if (is3DMode) {
+          this._btn.textContent = '3D';
+          this._btn.classList.add('is-3d');
+        } else {
+          this._btn.textContent = '2D';
+          this._btn.classList.remove('is-3d');
+        }
+      }
+
+      onRemove() {
+        this._container.parentNode.removeChild(this._container);
+        this._map = undefined;
+      }
+    }
+
+    const viewModeCtrl = new ViewModeControl();
+    map.addControl(viewModeCtrl, 'top-right');
+
+    // Controllo personalizzato per attivare/disattivare Course-Up
+    class CourseUpControl {
+      onAdd(map) {
+        this._map = map;
+        this._container = document.createElement('div');
+        this._container.className = 'maplibregl-ctrl';
+
+        this._btn = document.createElement('button');
+        this._btn.type = 'button';
+        this._btn.className = 'course-up-btn';
+        this._btn.innerHTML = '🧭 Course-Up';
+        this._btn.title = 'Attiva/Disattiva rotazione automatica mappa';
+
+        this._btn.addEventListener('click', async () => {
+          courseUpEnabled = !courseUpEnabled;
+          this.updateUI();
+
+          if (courseUpEnabled) {
+            await requestCompassPermissionIfNeeded();
+            if (lastCoords) {
+              moveCameraSafe({
+                center: lastCoords,
+                bearing: lastHeading,
+                pitch: getTargetPitch(),
+                duration: 450
+              });
+            }
+          } else {
+            moveCameraSafe({
+              bearing: 0,
+              pitch: getTargetPitch(),
+              duration: 450
+            });
+          }
+        });
+
+        this._container.appendChild(this._btn);
+        return this._container;
+      }
+
+      updateUI() {
+        if (courseUpEnabled) {
+          this._btn.classList.add('active');
+        } else {
+          this._btn.classList.remove('active');
+        }
+      }
+
+      onRemove() {
+        this._container.parentNode.removeChild(this._container);
+        this._map = undefined;
+      }
+    }
+
+    const courseUpCtrl = new CourseUpControl();
+    map.addControl(courseUpCtrl, 'top-right');
+
+    // Se l'utente sposta o ruota manualmente la mappa con le dita, mette in pausa Course-Up
+    map.on('dragstart', () => {
+      if (!isProgrammaticMove && courseUpEnabled) {
+        courseUpEnabled = false;
+        courseUpCtrl.updateUI();
+      }
+    });
+
+    // Crea il triangolino/freccia da navigatore
+    const wrapperEl = document.createElement('div');
+    wrapperEl.className = 'nav-marker-wrapper';
+
+    const arrowEl = document.createElement('div');
+    arrowEl.className = 'nav-arrow';
+    arrowEl.innerHTML = \`
+      <svg viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="16,3 27,27 16,21 5,27" fill="#0066ff" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round" />
+      </svg>
+    \`;
+    wrapperEl.appendChild(arrowEl);
+
+    // Pulsante mirino GPS manuale (non sposta la mappa finché non lo premi)
+    const geolocate = new maplibregl.GeolocateControl({
+      positionOptions: {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 5000
+      },
+      trackUserLocation: false,
+      showUserLocation: false,
+      showAccuracyCircle: false
+    });
+    map.addControl(geolocate, 'top-right');
+
+    function updateNavigationView(coords, heading) {
+      if (!Array.isArray(coords) || coords.length !== 2) return;
+      const [lon, lat] = coords;
+      if (typeof lon !== 'number' || typeof lat !== 'number' || Number.isNaN(lon) || Number.isNaN(lat)) return;
+
+      lastCoords = [lon, lat];
+
+      if (typeof heading === 'number' && !Number.isNaN(heading)) {
+        lastHeading = ((heading % 360) + 360) % 360;
+      }
+
+      if (!navMarker) {
+        navMarker = new maplibregl.Marker({
+          element: wrapperEl,
+          rotationAlignment: 'map',
+          pitchAlignment: 'map'
+        })
+          .setLngLat(lastCoords)
+          .setRotation(lastHeading)
+          .addTo(map);
+      } else {
+        navMarker.setLngLat(lastCoords);
+        navMarker.setRotation(lastHeading);
+      }
+
+      // Sposta la camera solo se l'utente ha attivato Course-Up
+      if (courseUpEnabled) {
+        moveCameraSafe({
+          center: lastCoords,
+          bearing: lastHeading,
+          pitch: getTargetPitch(),
+          duration: 300,
+          easing: (t) => t
+        });
+      }
+    }
+
+    geolocate.on('geolocate', (e) => {
+      const { longitude, latitude, heading } = e.coords;
+      updateNavigationView([longitude, latitude], heading);
+    });
+
+    // Tracciamento GPS in background: aggiorna la freccia senza spostare l'inquadratura iniziale
+    function startBackgroundTracking() {
+      if (!('geolocation' in navigator)) return;
+      navigator.geolocation.watchPosition(
+        (pos) => {
+          const { longitude, latitude, heading } = pos.coords;
+          updateNavigationView([longitude, latitude], heading);
+        },
+        () => {},
+        {
+          enableHighAccuracy: true,
+          maximumAge: 5000,
+          timeout: 10000
+        }
+      );
+    }
+
+    window.addEventListener('deviceorientationabsolute', (e) => {
+      if (typeof e.alpha === 'number' && !Number.isNaN(e.alpha) && lastCoords && courseUpEnabled) {
+        const compassHeading = (360 - e.alpha) % 360;
+        updateNavigationView(lastCoords, compassHeading);
+      }
+    });
+
+    window.addEventListener('deviceorientation', (e) => {
+      if (typeof e.webkitCompassHeading === 'number' && !Number.isNaN(e.webkitCompassHeading) && lastCoords && courseUpEnabled) {
+        updateNavigationView(lastCoords, e.webkitCompassHeading);
+      }
+    });
+
+    // Calcola automaticamente l'inquadratura del GeoJSON
+    function fitGeoJsonBounds(geojson) {
+      const bounds = new maplibregl.LngLatBounds();
+      function extendCoords(coords) {
+        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+          bounds.extend(coords);
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extendCoords);
+        }
+      }
+      if (geojson && Array.isArray(geojson.features)) {
+        geojson.features.forEach((f) => {
+          if (f.geometry && f.geometry.coordinates) {
+            extendCoords(f.geometry.coordinates);
+          }
+        });
+      }
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, { padding: 40, duration: 0 });
+      }
+    }
+
+    map.on('load', () => {
+      map.addSource('territorio-source', {
+        type: 'geojson',
+        data: territorioGeoJson
+      });
+
+      // Riempimento leggero per eventuali Poligoni nel GeoJSON
+      map.addLayer({
+        id: 'territorio-fill-layer',
+        type: 'fill',
+        source: 'territorio-source',
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: {
+          'fill-color': '#0066ff',
+          'fill-opacity': 0.15
+        }
+      });
+
+      // Bordo blu per LineString e Poligoni
+      map.addLayer({
+        id: 'territorio-confine-layer',
+        type: 'line',
+        source: 'territorio-source',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
+      });
+
+      fitGeoJsonBounds(territorioGeoJson);
+      startBackgroundTracking();
+    });
+  <\/script>
+</body>
+</html>`;
+
+    const fileInput = document.getElementById('fileInput');
+    const processBtn = document.getElementById('processBtn');
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
+    const logEl = document.getElementById('log');
+
+    let updatedFiles = [];
+
+    function log(msg) {
+      logEl.textContent += '\n' + msg;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function escapeAttr(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    }
+
+    function escapeHtmlText(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function extractTitles(htmlText, fallbackName) {
+      const titleMatch = htmlText.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      const docTitle = titleMatch ? titleMatch[1].trim() : fallbackName;
+
+      const ogMatch1 = htmlText.match(/<meta\s+[^>]*property=["']og:title["'][^>]*content=["']([^"']*)["']/i);
+      const ogMatch2 = htmlText.match(/<meta\s+[^>]*content=["']([^"']*)["'][^>]*property=["']og:title["']/i);
+      const ogTitle = ogMatch1 ? ogMatch1[1].trim() : (ogMatch2 ? ogMatch2[1].trim() : docTitle);
+
+      return { docTitle, ogTitle };
+    }
+
+    function extractAssignedJson(htmlText, varNames) {
+      for (const name of varNames) {
+        const re = new RegExp(`\\b(?:const|let|var)\\s+${name}\\s*=\\s*`, 'm');
+        const m = re.exec(htmlText);
+        if (!m) continue;
+
+        let idx = m.index + m[0].length;
+        while (idx < htmlText.length && /\s/.test(htmlText[idx])) idx++;
+        if (idx >= htmlText.length || (htmlText[idx] !== '{' && htmlText[idx] !== '[')) continue;
+
+        const start = idx;
+        let depth = 0;
+        let inStr = null;
+        let esc = false;
+
+        for (let i = start; i < htmlText.length; i++) {
+          const ch = htmlText[i];
+          if (esc) { esc = false; continue; }
+          if (ch === '\\' && inStr) { esc = true; continue; }
+          if (ch === '"' || ch === "'" || ch === '`') {
+            if (!inStr) inStr = ch;
+            else if (inStr === ch) inStr = null;
+            continue;
+          }
+          if (inStr) continue;
+          if (ch === '{' || ch === '[') depth++;
+          else if (ch === '}' || ch === ']') {
+            depth--;
+            if (depth === 0) {
+              const raw = htmlText.slice(start, i + 1);
+              try {
+                return JSON.parse(raw);
+              } catch (_) {
+                try {
+                  return (new Function(`return (${raw});`))();
+                } catch (err) {
+                  return null;
+                }
+              }
+            }
+          }
+        }
+      }
+      return null;
+    }
+
+    function extractZoom(htmlText) {
+      const m = htmlText.match(/\bzoom\s*:\s*([0-9]+(?:\.[0-9]+)?)/);
+      return m ? Number(m[1]) : 16;
+    }
+
+    fileInput.addEventListener('change', () => {
+      processBtn.disabled = fileInput.files.length === 0;
+      downloadAllBtn.disabled = true;
+      updatedFiles = [];
+      logEl.textContent = `Selezionati ${fileInput.files.length} file. Clicca su "Elabora file selezionati".`;
+    });
+
+    processBtn.addEventListener('click', async () => {
+      updatedFiles = [];
+      logEl.textContent = 'Elaborazione in corso...';
+      let ok = 0;
+
+      for (const file of fileInput.files) {
+        try {
+          const src = await file.text();
+          const fallbackName = file.name.replace(/\.html?$/i, '');
+          const { docTitle, ogTitle } = extractTitles(src, fallbackName);
+          const geojson = extractAssignedJson(src, ['territorioGeoJson', 'territorioGeoJSON', 'confineGeoJSON', 'confineGeoJson']);
+          let center = extractAssignedJson(src, ['center']);
+
+          if (!center) {
+            const cm = src.match(/\bcenter\s*:\s*(\[[^\]]+\])/);
+            if (cm) center = JSON.parse(cm[1]);
+          }
+          const zoom = extractZoom(src);
+
+          if (!geojson || !center) {
+            log(`[ERRORE] ${file.name}: geojson o center non trovati`);
+            continue;
+          }
+
+          const outContent = BASE_TEMPLATE
+            .replace('__OG_TITLE__', escapeAttr(ogTitle))
+            .replace('__DOC_TITLE__', escapeHtmlText(docTitle))
+            .replace('__GEOJSON__', JSON.stringify(geojson, null, 2))
+            .replace('__CENTER__', JSON.stringify(center))
+            .replace('__ZOOM__', String(zoom));
+
+          updatedFiles.push({ name: file.name, content: outContent });
+          ok++;
+          log(`[OK] ${file.name} -> title: "${docTitle}"`);
+        } catch (err) {
+          log(`[ERRORE] ${file.name}: ${err.message}`);
+        }
+      }
+
+      log(`\nCompletato: ${ok}/${fileInput.files.length} file pronti.`);
+      downloadAllBtn.disabled = updatedFiles.length === 0;
+    });
+
+    downloadAllBtn.addEventListener('click', () => {
+      updatedFiles.forEach((item, index) => {
+        setTimeout(() => {
+          const blob = new Blob([item.content], { type: 'text/html;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = item.name;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, index * 180);
+      });
+    });
+  </script>
+</body>
+</html>
