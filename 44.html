@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <!-- Tag Open Graph per anteprima link -->
+<!-- Tag Open Graph per anteprima link -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Territorio 44 – Torino Bertolla" />
   <meta property="og:description" content="Mappa interattiva con confini e navigatore Course-Up" />
@@ -108,70 +108,223 @@
       }
     });
 
-    const mieiPoligoni = {
-      "type": "FeatureCollection",
-      "features": [
-        {
-          "type": "Feature",
-          "geometry": {
-            "coordinates": [
-              [7.734741, 45.108882],
-              [7.734301, 45.10811],
-              [7.73429, 45.10797],
-              [7.734687, 45.107766],
-              [7.734961, 45.107486],
-              [7.735084, 45.107149],
-              [7.735396, 45.106297],
-              [7.735487, 45.105884],
-              [7.735797, 45.1044],
-              [7.73584, 45.104021],
-              [7.735601, 45.103799],
-              [7.735955, 45.103368],
-              [7.737264, 45.102233],
-              [7.738144, 45.101416],
-              [7.738574, 45.10128],
-              [7.739518, 45.101416],
-              [7.740076, 45.101212],
-              [7.740699, 45.101038],
-              [7.741332, 45.100743],
-              [7.741407, 45.10069],
-              [7.740999, 45.100296],
-              [7.74071, 45.099888],
-              [7.740431, 45.099419],
-              [7.740044, 45.098556],
-              [7.739604, 45.097398],
-              [7.739411, 45.096922],
-              [7.739422, 45.096536],
-              [7.739035, 45.095491],
-              [7.741128, 45.096142],
-              [7.744219, 45.097096],
-              [7.74649, 45.09775],
-              [7.747413, 45.097924],
-              [7.748454, 45.098227],
-              [7.748873, 45.098287],
-              [7.748948, 45.099589],
-              [7.749409, 45.100573],
-              [7.750629, 45.100321],
-              [7.751433, 45.101215],
-              [7.75168, 45.103138],
-              [7.750043, 45.103576],
-              [7.74883, 45.104094],
-              [7.747607, 45.104623],
-              [7.746877, 45.105085],
-              [7.746372, 45.105546],
-              [7.745997, 45.105743],
-              [7.745331, 45.106053],
-              [7.744636, 45.105289],
-              [7.742339, 45.105653],
-              [7.741404, 45.105842],
-              [7.742811, 45.107968],
-              [7.734826, 45.108878]
-            ],
-            "type": "LineString"
-          }
-        }
-      ]
-    };
+    const territorioGeoJson = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "coordinates": [
+          [
+            7.734741,
+            45.108882
+          ],
+          [
+            7.734301,
+            45.10811
+          ],
+          [
+            7.73429,
+            45.10797
+          ],
+          [
+            7.734687,
+            45.107766
+          ],
+          [
+            7.734961,
+            45.107486
+          ],
+          [
+            7.735084,
+            45.107149
+          ],
+          [
+            7.735396,
+            45.106297
+          ],
+          [
+            7.735487,
+            45.105884
+          ],
+          [
+            7.735797,
+            45.1044
+          ],
+          [
+            7.73584,
+            45.104021
+          ],
+          [
+            7.735601,
+            45.103799
+          ],
+          [
+            7.735955,
+            45.103368
+          ],
+          [
+            7.737264,
+            45.102233
+          ],
+          [
+            7.738144,
+            45.101416
+          ],
+          [
+            7.738574,
+            45.10128
+          ],
+          [
+            7.739518,
+            45.101416
+          ],
+          [
+            7.740076,
+            45.101212
+          ],
+          [
+            7.740699,
+            45.101038
+          ],
+          [
+            7.741332,
+            45.100743
+          ],
+          [
+            7.741407,
+            45.10069
+          ],
+          [
+            7.740999,
+            45.100296
+          ],
+          [
+            7.74071,
+            45.099888
+          ],
+          [
+            7.740431,
+            45.099419
+          ],
+          [
+            7.740044,
+            45.098556
+          ],
+          [
+            7.739604,
+            45.097398
+          ],
+          [
+            7.739411,
+            45.096922
+          ],
+          [
+            7.739422,
+            45.096536
+          ],
+          [
+            7.739035,
+            45.095491
+          ],
+          [
+            7.741128,
+            45.096142
+          ],
+          [
+            7.744219,
+            45.097096
+          ],
+          [
+            7.74649,
+            45.09775
+          ],
+          [
+            7.747413,
+            45.097924
+          ],
+          [
+            7.748454,
+            45.098227
+          ],
+          [
+            7.748873,
+            45.098287
+          ],
+          [
+            7.748948,
+            45.099589
+          ],
+          [
+            7.749409,
+            45.100573
+          ],
+          [
+            7.750629,
+            45.100321
+          ],
+          [
+            7.751433,
+            45.101215
+          ],
+          [
+            7.75168,
+            45.103138
+          ],
+          [
+            7.750043,
+            45.103576
+          ],
+          [
+            7.74883,
+            45.104094
+          ],
+          [
+            7.747607,
+            45.104623
+          ],
+          [
+            7.746877,
+            45.105085
+          ],
+          [
+            7.746372,
+            45.105546
+          ],
+          [
+            7.745997,
+            45.105743
+          ],
+          [
+            7.745331,
+            45.106053
+          ],
+          [
+            7.744636,
+            45.105289
+          ],
+          [
+            7.742339,
+            45.105653
+          ],
+          [
+            7.741404,
+            45.105842
+          ],
+          [
+            7.742811,
+            45.107968
+          ],
+          [
+            7.734826,
+            45.108878
+          ]
+        ],
+        "type": "LineString"
+      }
+    }
+  ]
+};
 
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
@@ -204,7 +357,7 @@
           }
         ]
       },
-      center: [7.743, 45.102],
+      center: [7.743,45.102],
       zoom: 14,
       pitch: PITCH_2D
     });
@@ -368,13 +521,14 @@
     `;
     wrapperEl.appendChild(arrowEl);
 
+    // Pulsante mirino GPS manuale (non sposta la mappa finché non lo premi)
     const geolocate = new maplibregl.GeolocateControl({
       positionOptions: {
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 5000
       },
-      trackUserLocation: true,
+      trackUserLocation: false,
       showUserLocation: false,
       showAccuracyCircle: false
     });
@@ -405,6 +559,7 @@
         navMarker.setRotation(lastHeading);
       }
 
+      // Sposta la camera solo se l'utente ha attivato Course-Up
       if (courseUpEnabled) {
         moveCameraSafe({
           center: lastCoords,
@@ -421,21 +576,19 @@
       updateNavigationView([longitude, latitude], heading);
     });
 
-    // Prima stima veloce tramite rete/cache in attesa che il GPS ad alta precisione agganci
-    function requestFastInitialPosition() {
+    // Tracciamento GPS in background: aggiorna la freccia senza spostare l'inquadratura iniziale
+    function startBackgroundTracking() {
       if (!('geolocation' in navigator)) return;
-      navigator.geolocation.getCurrentPosition(
+      navigator.geolocation.watchPosition(
         (pos) => {
-          if (!lastCoords) {
-            const { longitude, latitude, heading } = pos.coords;
-            updateNavigationView([longitude, latitude], heading);
-          }
+          const { longitude, latitude, heading } = pos.coords;
+          updateNavigationView([longitude, latitude], heading);
         },
         () => {},
         {
-          enableHighAccuracy: false,
-          maximumAge: 60000,
-          timeout: 3000
+          enableHighAccuracy: true,
+          maximumAge: 5000,
+          timeout: 10000
         }
       );
     }
@@ -453,37 +606,60 @@
       }
     });
 
+    // Calcola automaticamente l'inquadratura del GeoJSON
+    function fitGeoJsonBounds(geojson) {
+      const bounds = new maplibregl.LngLatBounds();
+      function extendCoords(coords) {
+        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+          bounds.extend(coords);
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extendCoords);
+        }
+      }
+      if (geojson && Array.isArray(geojson.features)) {
+        geojson.features.forEach((f) => {
+          if (f.geometry && f.geometry.coordinates) {
+            extendCoords(f.geometry.coordinates);
+          }
+        });
+      }
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, { padding: 40, duration: 0 });
+      }
+    }
+
     map.on('load', () => {
-      map.addSource('confini', {
+      map.addSource('territorio-source', {
         type: 'geojson',
-        data: mieiPoligoni
+        data: territorioGeoJson
       });
 
+      // Riempimento leggero per eventuali Poligoni nel GeoJSON
       map.addLayer({
-        id: 'poligoni-bordo',
-        type: 'line',
-        source: 'confini',
+        id: 'territorio-fill-layer',
+        type: 'fill',
+        source: 'territorio-source',
+        filter: ['==', ['geometry-type'], 'Polygon'],
         paint: {
-          'line-color': '#0066ff',
-          'line-width': 4
+          'fill-color': '#0066ff',
+          'fill-opacity': 0.15
         }
       });
 
-      const coords = mieiPoligoni.features[0]?.geometry?.coordinates || [];
-      if (coords.length > 0) {
-        const bounds = coords.reduce(
-          (b, coord) => b.extend(coord),
-          new maplibregl.LngLatBounds(coords[0], coords[0])
-        );
-        isProgrammaticMove = true;
-        map.fitBounds(bounds, { padding: 40 });
-        map.once('moveend', () => {
-          isProgrammaticMove = false;
-        });
-      }
+      // Bordo blu per LineString e Poligoni
+      map.addLayer({
+        id: 'territorio-confine-layer',
+        type: 'line',
+        source: 'territorio-source',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
+      });
 
-      requestFastInitialPosition();
-      geolocate.trigger();
+      fitGeoJsonBounds(territorioGeoJson);
+      startBackgroundTracking();
     });
   </script>
 </body>

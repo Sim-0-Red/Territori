@@ -108,37 +108,69 @@
       }
     });
 
-    // Dati territorio: Territorio 21 - Torino Repubblica
-    const territorio21GeoJSON = {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          id: 'g4Njg',
-          properties: {
-            name: 'Territorio 21',
-            opacity: 1,
-            weight: 5
-          },
-          geometry: {
-            type: 'LineString',
-            coordinates: [
-              [7.685324, 45.078984],
-              [7.686596, 45.078583],
-              [7.687686, 45.078269],
-              [7.688174, 45.079109],
-              [7.688244, 45.079336],
-              [7.687879, 45.079825],
-              [7.687117, 45.080358],
-              [7.686435, 45.08071],
-              [7.686001, 45.080029],
-              [7.685625, 45.07948],
-              [7.685335, 45.079011]
-            ]
-          }
-        }
-      ]
-    };
+    const territorioGeoJson = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "g4Njg",
+      "properties": {
+        "name": "Territorio 21",
+        "opacity": 1,
+        "weight": 5
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            7.685324,
+            45.078984
+          ],
+          [
+            7.686596,
+            45.078583
+          ],
+          [
+            7.687686,
+            45.078269
+          ],
+          [
+            7.688174,
+            45.079109
+          ],
+          [
+            7.688244,
+            45.079336
+          ],
+          [
+            7.687879,
+            45.079825
+          ],
+          [
+            7.687117,
+            45.080358
+          ],
+          [
+            7.686435,
+            45.08071
+          ],
+          [
+            7.686001,
+            45.080029
+          ],
+          [
+            7.685625,
+            45.07948
+          ],
+          [
+            7.685335,
+            45.079011
+          ]
+        ]
+      }
+    }
+  ]
+};
 
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
@@ -161,10 +193,6 @@
             ],
             tileSize: 256,
             attribution: '© Esri, OpenStreetMap contributors'
-          },
-          territorio21: {
-            type: 'geojson',
-            data: territorio21GeoJSON
           }
         },
         layers: [
@@ -172,38 +200,10 @@
             id: 'esri-street-layer',
             type: 'raster',
             source: 'esriStreet'
-          },
-          {
-            id: 'territorio-21-line-casing',
-            type: 'line',
-            source: 'territorio21',
-            layout: {
-              'line-join': 'round',
-              'line-cap': 'round'
-            },
-            paint: {
-              'line-color': '#ffffff',
-              'line-width': 8,
-              'line-opacity': 0.85
-            }
-          },
-          {
-            id: 'territorio-21-line',
-            type: 'line',
-            source: 'territorio21',
-            layout: {
-              'line-join': 'round',
-              'line-cap': 'round'
-            },
-            paint: {
-              'line-color': '#0066ff',
-              'line-width': 5,
-              'line-opacity': 1
-            }
           }
         ]
       },
-      center: [7.6872024859249075, 45.079717785615195],
+      center: [7.6872024859249075,45.079717785615195],
       zoom: 16,
       pitch: PITCH_2D
     });
@@ -452,7 +452,59 @@
       }
     });
 
+    // Calcola automaticamente l'inquadratura del GeoJSON
+    function fitGeoJsonBounds(geojson) {
+      const bounds = new maplibregl.LngLatBounds();
+      function extendCoords(coords) {
+        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+          bounds.extend(coords);
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extendCoords);
+        }
+      }
+      if (geojson && Array.isArray(geojson.features)) {
+        geojson.features.forEach((f) => {
+          if (f.geometry && f.geometry.coordinates) {
+            extendCoords(f.geometry.coordinates);
+          }
+        });
+      }
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, { padding: 40, duration: 0 });
+      }
+    }
+
     map.on('load', () => {
+      map.addSource('territorio-source', {
+        type: 'geojson',
+        data: territorioGeoJson
+      });
+
+      // Riempimento leggero per eventuali Poligoni nel GeoJSON
+      map.addLayer({
+        id: 'territorio-fill-layer',
+        type: 'fill',
+        source: 'territorio-source',
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: {
+          'fill-color': '#0066ff',
+          'fill-opacity': 0.15
+        }
+      });
+
+      // Bordo blu per LineString e Poligoni
+      map.addLayer({
+        id: 'territorio-confine-layer',
+        type: 'line',
+        source: 'territorio-source',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
+      });
+
+      fitGeoJsonBounds(territorioGeoJson);
       startBackgroundTracking();
     });
   </script>

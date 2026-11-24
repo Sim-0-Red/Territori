@@ -108,37 +108,69 @@
       }
     });
 
-    // Dati territorio: Territorio 22 - Torino Regio Parco
-    const territorio22GeoJSON = {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          id: 'A2NTQ',
-          properties: {
-            name: 'Territorio 22',
-            opacity: 1,
-            weight: 5
-          },
-          geometry: {
-            type: 'LineString',
-            coordinates: [
-              [7.700496, 45.079462],
-              [7.703716, 45.075783],
-              [7.701655, 45.075556],
-              [7.699616, 45.075101],
-              [7.697017, 45.074051],
-              [7.695709, 45.07392],
-              [7.694207, 45.074284],
-              [7.693026, 45.075207],
-              [7.692404, 45.075798],
-              [7.696225, 45.077448],
-              [7.700432, 45.079371]
-            ]
-          }
-        }
-      ]
-    };[cite: 2]
+    const territorioGeoJson = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "A2NTQ",
+      "properties": {
+        "name": "Territorio 22",
+        "opacity": 1,
+        "weight": 5
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            7.700496,
+            45.079462
+          ],
+          [
+            7.703716,
+            45.075783
+          ],
+          [
+            7.701655,
+            45.075556
+          ],
+          [
+            7.699616,
+            45.075101
+          ],
+          [
+            7.697017,
+            45.074051
+          ],
+          [
+            7.695709,
+            45.07392
+          ],
+          [
+            7.694207,
+            45.074284
+          ],
+          [
+            7.693026,
+            45.075207
+          ],
+          [
+            7.692404,
+            45.075798
+          ],
+          [
+            7.696225,
+            45.077448
+          ],
+          [
+            7.700432,
+            45.079371
+          ]
+        ]
+      }
+    }
+  ]
+};
 
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
@@ -148,8 +180,6 @@
     function getTargetPitch() {
       return is3DMode ? PITCH_3D : PITCH_2D;
     }
-
-    const isMobile = window.innerWidth <= 768;
 
     const map = new maplibregl.Map({
       container: 'map',
@@ -163,10 +193,6 @@
             ],
             tileSize: 256,
             attribution: '© Esri, OpenStreetMap contributors'
-          },
-          territorio22: {
-            type: 'geojson',
-            data: territorio22GeoJSON
           }
         },
         layers: [
@@ -174,39 +200,11 @@
             id: 'esri-street-layer',
             type: 'raster',
             source: 'esriStreet'
-          },
-          {
-            id: 'territorio-22-line-casing',
-            type: 'line',
-            source: 'territorio22',
-            layout: {
-              'line-join': 'round',
-              'line-cap': 'round'
-            },
-            paint: {
-              'line-color': '#ffffff',
-              'line-width': 8,
-              'line-opacity': 0.85
-            }
-          },
-          {
-            id: 'territorio-22-line',
-            type: 'line',
-            source: 'territorio22',
-            layout: {
-              'line-join': 'round',
-              'line-cap': 'round'
-            },
-            paint: {
-              'line-color': '#0066ff',
-              'line-width': 5,
-              'line-opacity': 1
-            }
           }
         ]
       },
-      center: [7.698026, 45.076981],
-      zoom: isMobile ? 15.1 : 15.6,
+      center: [7.698026,45.076981],
+      zoom: 15,
       pitch: PITCH_2D
     });
 
@@ -454,7 +452,59 @@
       }
     });
 
+    // Calcola automaticamente l'inquadratura del GeoJSON
+    function fitGeoJsonBounds(geojson) {
+      const bounds = new maplibregl.LngLatBounds();
+      function extendCoords(coords) {
+        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+          bounds.extend(coords);
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extendCoords);
+        }
+      }
+      if (geojson && Array.isArray(geojson.features)) {
+        geojson.features.forEach((f) => {
+          if (f.geometry && f.geometry.coordinates) {
+            extendCoords(f.geometry.coordinates);
+          }
+        });
+      }
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, { padding: 40, duration: 0 });
+      }
+    }
+
     map.on('load', () => {
+      map.addSource('territorio-source', {
+        type: 'geojson',
+        data: territorioGeoJson
+      });
+
+      // Riempimento leggero per eventuali Poligoni nel GeoJSON
+      map.addLayer({
+        id: 'territorio-fill-layer',
+        type: 'fill',
+        source: 'territorio-source',
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: {
+          'fill-color': '#0066ff',
+          'fill-opacity': 0.15
+        }
+      });
+
+      // Bordo blu per LineString e Poligoni
+      map.addLayer({
+        id: 'territorio-confine-layer',
+        type: 'line',
+        source: 'territorio-source',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
+      });
+
+      fitGeoJsonBounds(territorioGeoJson);
       startBackgroundTracking();
     });
   </script>

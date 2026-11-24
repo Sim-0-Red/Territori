@@ -108,6 +108,99 @@
       }
     });
 
+    const territorioGeoJson = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "YwMjQ",
+      "properties": {
+        "opacity": 1,
+        "weight": 5
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            7.714014,
+            45.073015
+          ],
+          [
+            7.71556,
+            45.072311
+          ],
+          [
+            7.715517,
+            45.072091
+          ],
+          [
+            7.716268,
+            45.071758
+          ],
+          [
+            7.716386,
+            45.071743
+          ],
+          [
+            7.716955,
+            45.070153
+          ],
+          [
+            7.711159,
+            45.069267
+          ],
+          [
+            7.708648,
+            45.068866
+          ],
+          [
+            7.708293,
+            45.070055
+          ],
+          [
+            7.707898,
+            45.071181
+          ],
+          [
+            7.707609,
+            45.071976
+          ],
+          [
+            7.710968,
+            45.072521
+          ],
+          [
+            7.713265,
+            45.07293
+          ],
+          [
+            7.713962,
+            45.073066
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "YxODE",
+      "properties": {},
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            7.713995,
+            45.073073
+          ],
+          [
+            7.71407,
+            45.073028
+          ]
+        ]
+      }
+    }
+  ]
+};
+
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
     const PITCH_3D = 60;
@@ -116,74 +209,6 @@
     function getTargetPitch() {
       return is3DMode ? PITCH_3D : PITCH_2D;
     }
-
-    // Dati GeoJSON del confine "Territorio 15" estratti dal file uMap
-    const territorio15GeoJSON = {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          id: 'YwMjQ',
-          properties: {
-            opacity: 1,
-            weight: 5
-          },
-          geometry: {
-            type: 'LineString',
-            coordinates: [
-              [7.714014, 45.073015],
-              [7.71556, 45.072311],
-              [7.715517, 45.072091],
-              [7.716268, 45.071758],
-              [7.716386, 45.071743],
-              [7.716955, 45.070153],
-              [7.711159, 45.069267],
-              [7.708648, 45.068866],
-              [7.708293, 45.070055],
-              [7.707898, 45.071181],
-              [7.707609, 45.071976],
-              [7.710968, 45.072521],
-              [7.713265, 45.07293],
-              [7.713962, 45.073066]
-            ]
-          }
-        },
-        {
-          type: 'Feature',
-          id: 'YxODE',
-          properties: {},
-          geometry: {
-            type: 'LineString',
-            coordinates: [
-              [7.713995, 45.073073],
-              [7.71407, 45.073028]
-            ]
-          }
-        }
-      ]
-    };
-
-    function getGeoJSONBounds(geojson) {
-      const bounds = new maplibregl.LngLatBounds();
-      geojson.features.forEach((feature) => {
-        const geom = feature.geometry;
-        if (!geom) return;
-        if (geom.type === 'Point') {
-          bounds.extend(geom.coordinates);
-        } else if (geom.type === 'LineString' || geom.type === 'MultiPoint') {
-          geom.coordinates.forEach((coord) => bounds.extend(coord));
-        } else if (geom.type === 'Polygon' || geom.type === 'MultiLineString') {
-          geom.coordinates.forEach((ring) => ring.forEach((coord) => bounds.extend(coord)));
-        } else if (geom.type === 'MultiPolygon') {
-          geom.coordinates.forEach((poly) =>
-            poly.forEach((ring) => ring.forEach((coord) => bounds.extend(coord)))
-          );
-        }
-      });
-      return bounds;
-    }
-
-    const territoryBounds = getGeoJSONBounds(territorio15GeoJSON);
 
     const map = new maplibregl.Map({
       container: 'map',
@@ -207,8 +232,7 @@
           }
         ]
       },
-      // Centro e zoom presi dal file uMap (Territorio 15), poi adattati al perimetro in fitBounds
-      center: [7.712620852786506, 45.07104915319421],
+      center: [7.712620852786506,45.07104915319421],
       zoom: 16,
       pitch: PITCH_2D
     });
@@ -457,40 +481,59 @@
       }
     });
 
+    // Calcola automaticamente l'inquadratura del GeoJSON
+    function fitGeoJsonBounds(geojson) {
+      const bounds = new maplibregl.LngLatBounds();
+      function extendCoords(coords) {
+        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+          bounds.extend(coords);
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extendCoords);
+        }
+      }
+      if (geojson && Array.isArray(geojson.features)) {
+        geojson.features.forEach((f) => {
+          if (f.geometry && f.geometry.coordinates) {
+            extendCoords(f.geometry.coordinates);
+          }
+        });
+      }
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, { padding: 40, duration: 0 });
+      }
+    }
+
     map.on('load', () => {
-      // Aggiunge la sorgente dati e il layer grafico del confine Territorio 15
-      map.addSource('territorio-15', {
+      map.addSource('territorio-source', {
         type: 'geojson',
-        data: territorio15GeoJSON
+        data: territorioGeoJson
       });
 
+      // Riempimento leggero per eventuali Poligoni nel GeoJSON
       map.addLayer({
-        id: 'territorio-15-line',
-        type: 'line',
-        source: 'territorio-15',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
+        id: 'territorio-fill-layer',
+        type: 'fill',
+        source: 'territorio-source',
+        filter: ['==', ['geometry-type'], 'Polygon'],
         paint: {
-          'line-color': '#0066ff',
-          'line-width': 5,
-          'line-opacity': 1
+          'fill-color': '#0066ff',
+          'fill-opacity': 0.15
         }
       });
 
-      if (!territoryBounds.isEmpty()) {
-        isProgrammaticMove = true;
-        map.fitBounds(territoryBounds, {
-          padding: 110,
-          maxZoom: 15,
-          duration: 0
-        });
-        map.once('moveend', () => {
-          isProgrammaticMove = false;
-        });
-      }
+      // Bordo blu per LineString e Poligoni
+      map.addLayer({
+        id: 'territorio-confine-layer',
+        type: 'line',
+        source: 'territorio-source',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
+      });
 
+      fitGeoJsonBounds(territorioGeoJson);
       startBackgroundTracking();
     });
   </script>

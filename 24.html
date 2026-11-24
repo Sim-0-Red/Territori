@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <!-- Tag Open Graph per anteprima link -->
+<!-- Tag Open Graph per anteprima link -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Territorio 24 – Torino Aurora" />
   <meta property="og:description" content="Mappa interattiva con confini e navigatore Course-Up" />
@@ -109,44 +109,104 @@
     });
 
     const territorioGeoJson = {
-      "type": "FeatureCollection",
-      "features": [
-        {
-          "type": "Feature",
-          "geometry": {
-            "coordinates": [
-              [7.68932, 45.079734],
-              [7.6899, 45.079984],
-              [7.689792, 45.080105],
-              [7.690179, 45.080722],
-              [7.690635, 45.081399],
-              [7.692041, 45.083504],
-              [7.692116, 45.083625],
-              [7.690877, 45.084037],
-              [7.689352, 45.084514],
-              [7.688929, 45.084646],
-              [7.688521, 45.084052],
-              [7.688193, 45.083549],
-              [7.687861, 45.082973],
-              [7.687635, 45.08261],
-              [7.68719, 45.08194],
-              [7.686948, 45.081565],
-              [7.687356, 45.08144],
-              [7.688322, 45.080706],
-              [7.688977, 45.080116],
-              [7.689309, 45.079741]
-            ],
-            "type": "LineString"
-          },
-          "properties": {
-            "_umap_options": {
-              "opacity": 1,
-              "weight": 5
-            }
-          }
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "coordinates": [
+          [
+            7.68932,
+            45.079734
+          ],
+          [
+            7.6899,
+            45.079984
+          ],
+          [
+            7.689792,
+            45.080105
+          ],
+          [
+            7.690179,
+            45.080722
+          ],
+          [
+            7.690635,
+            45.081399
+          ],
+          [
+            7.692041,
+            45.083504
+          ],
+          [
+            7.692116,
+            45.083625
+          ],
+          [
+            7.690877,
+            45.084037
+          ],
+          [
+            7.689352,
+            45.084514
+          ],
+          [
+            7.688929,
+            45.084646
+          ],
+          [
+            7.688521,
+            45.084052
+          ],
+          [
+            7.688193,
+            45.083549
+          ],
+          [
+            7.687861,
+            45.082973
+          ],
+          [
+            7.687635,
+            45.08261
+          ],
+          [
+            7.68719,
+            45.08194
+          ],
+          [
+            7.686948,
+            45.081565
+          ],
+          [
+            7.687356,
+            45.08144
+          ],
+          [
+            7.688322,
+            45.080706
+          ],
+          [
+            7.688977,
+            45.080116
+          ],
+          [
+            7.689309,
+            45.079741
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "_umap_options": {
+          "opacity": 1,
+          "weight": 5
         }
-      ]
-    };
+      }
+    }
+  ]
+};
 
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
@@ -179,7 +239,7 @@
           }
         ]
       },
-      center: [7.6895, 45.0821],
+      center: [7.6895,45.0821],
       zoom: 15,
       pitch: PITCH_2D
     });

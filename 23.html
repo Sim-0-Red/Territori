@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <!-- Tag Open Graph per anteprima link -->
+<!-- Tag Open Graph per anteprima link -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Territorio 23 – Torino Regio Parco" />
   <meta property="og:description" content="Mappa interattiva con confini e navigatore Course-Up" />
@@ -109,85 +109,85 @@
     });
 
     const territorioGeoJson = {
-      "type": "FeatureCollection",
-      "features": [
-        {
-          "type": "Feature",
-          "geometry": {
-            "type": "LineString",
-            "coordinates": [
-              [
-                7.697195,
-                45.083191
-              ],
-              [
-                7.70036,
-                45.079669
-              ],
-              [
-                7.698627,
-                45.078907
-              ],
-              [
-                7.69727,
-                45.078279
-              ],
-              [
-                7.696958,
-                45.078301
-              ],
-              [
-                7.696674,
-                45.078487
-              ],
-              [
-                7.695344,
-                45.079968
-              ],
-              [
-                7.694721,
-                45.080566
-              ],
-              [
-                7.694566,
-                45.08071
-              ],
-              [
-                7.693466,
-                45.081093
-              ],
-              [
-                7.692978,
-                45.081286
-              ],
-              [
-                7.694437,
-                45.081957
-              ],
-              [
-                7.695484,
-                45.082441
-              ],
-              [
-                7.696133,
-                45.082737
-              ],
-              [
-                7.697183,
-                45.083191
-              ]
-            ]
-          },
-          "properties": {
-            "_umap_options": {
-              "opacity": 1,
-              "weight": 6,
-              "color": "DarkBlue"
-            }
-          }
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            7.697195,
+            45.083191
+          ],
+          [
+            7.70036,
+            45.079669
+          ],
+          [
+            7.698627,
+            45.078907
+          ],
+          [
+            7.69727,
+            45.078279
+          ],
+          [
+            7.696958,
+            45.078301
+          ],
+          [
+            7.696674,
+            45.078487
+          ],
+          [
+            7.695344,
+            45.079968
+          ],
+          [
+            7.694721,
+            45.080566
+          ],
+          [
+            7.694566,
+            45.08071
+          ],
+          [
+            7.693466,
+            45.081093
+          ],
+          [
+            7.692978,
+            45.081286
+          ],
+          [
+            7.694437,
+            45.081957
+          ],
+          [
+            7.695484,
+            45.082441
+          ],
+          [
+            7.696133,
+            45.082737
+          ],
+          [
+            7.697183,
+            45.083191
+          ]
+        ]
+      },
+      "properties": {
+        "_umap_options": {
+          "opacity": 1,
+          "weight": 6,
+          "color": "DarkBlue"
         }
-      ]
-    };
+      }
+    }
+  ]
+};
 
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
@@ -220,7 +220,7 @@
           }
         ]
       },
-      center: [7.6966, 45.0807],
+      center: [7.6966,45.0807],
       zoom: 15,
       pitch: PITCH_2D
     });

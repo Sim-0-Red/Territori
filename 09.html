@@ -108,6 +108,222 @@
       }
     });
 
+    const territorioGeoJson = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "UyMDY",
+      "properties": {
+        "name": "Territorio 09",
+        "opacity": 1,
+        "weight": 6
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            7.692677,
+            45.057913
+          ],
+          [
+            7.693385,
+            45.057735
+          ],
+          [
+            7.694737,
+            45.057227
+          ],
+          [
+            7.695879,
+            45.056807
+          ],
+          [
+            7.695835,
+            45.056582
+          ],
+          [
+            7.696168,
+            45.056355
+          ],
+          [
+            7.696255,
+            45.056098
+          ],
+          [
+            7.696233,
+            45.055788
+          ],
+          [
+            7.696303,
+            45.055625
+          ],
+          [
+            7.696469,
+            45.055454
+          ],
+          [
+            7.69685,
+            45.055102
+          ],
+          [
+            7.697091,
+            45.055057
+          ],
+          [
+            7.697488,
+            45.054989
+          ],
+          [
+            7.69789,
+            45.054875
+          ],
+          [
+            7.698174,
+            45.054724
+          ],
+          [
+            7.699269,
+            45.053981
+          ],
+          [
+            7.699676,
+            45.053981
+          ],
+          [
+            7.699848,
+            45.054
+          ],
+          [
+            7.700502,
+            45.053856
+          ],
+          [
+            7.701309,
+            45.053875
+          ],
+          [
+            7.702052,
+            45.053928
+          ],
+          [
+            7.702503,
+            45.053993
+          ],
+          [
+            7.703833,
+            45.053879
+          ],
+          [
+            7.705734,
+            45.053357
+          ],
+          [
+            7.706131,
+            45.053152
+          ],
+          [
+            7.706957,
+            45.052902
+          ],
+          [
+            7.7073,
+            45.052887
+          ],
+          [
+            7.708008,
+            45.052955
+          ],
+          [
+            7.710251,
+            45.053261
+          ],
+          [
+            7.714532,
+            45.055671
+          ],
+          [
+            7.716043,
+            45.060767
+          ],
+          [
+            7.71585,
+            45.060934
+          ],
+          [
+            7.715679,
+            45.06129
+          ],
+          [
+            7.715528,
+            45.061956
+          ],
+          [
+            7.715464,
+            45.062941
+          ],
+          [
+            7.715357,
+            45.0631
+          ],
+          [
+            7.714756,
+            45.063342
+          ],
+          [
+            7.713194,
+            45.063891
+          ],
+          [
+            7.712798,
+            45.063989
+          ],
+          [
+            7.711918,
+            45.063702
+          ],
+          [
+            7.711307,
+            45.064398
+          ],
+          [
+            7.710115,
+            45.065725
+          ],
+          [
+            7.708871,
+            45.067035
+          ],
+          [
+            7.70827,
+            45.067793
+          ],
+          [
+            7.701223,
+            45.064779
+          ],
+          [
+            7.698499,
+            45.062984
+          ],
+          [
+            7.697169,
+            45.06178
+          ],
+          [
+            7.695485,
+            45.060144
+          ],
+          [
+            7.692651,
+            45.057926
+          ]
+        ]
+      }
+    }
+  ]
+};
+
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
     const PITCH_3D = 60;
@@ -116,98 +332,6 @@
     function getTargetPitch() {
       return is3DMode ? PITCH_3D : PITCH_2D;
     }
-
-    // Dati GeoJSON del confine "Territorio 09" estratti dal file uMap
-    const territorio09GeoJSON = {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          id: 'UyMDY',
-          properties: {
-            name: 'Territorio 09',
-            opacity: 1,
-            weight: 6
-          },
-          geometry: {
-            type: 'LineString',
-            coordinates: [
-              [7.692677, 45.057913],
-              [7.693385, 45.057735],
-              [7.694737, 45.057227],
-              [7.695879, 45.056807],
-              [7.695835, 45.056582],
-              [7.696168, 45.056355],
-              [7.696255, 45.056098],
-              [7.696233, 45.055788],
-              [7.696303, 45.055625],
-              [7.696469, 45.055454],
-              [7.69685, 45.055102],
-              [7.697091, 45.055057],
-              [7.697488, 45.054989],
-              [7.69789, 45.054875],
-              [7.698174, 45.054724],
-              [7.699269, 45.053981],
-              [7.699676, 45.053981],
-              [7.699848, 45.054],
-              [7.700502, 45.053856],
-              [7.701309, 45.053875],
-              [7.702052, 45.053928],
-              [7.702503, 45.053993],
-              [7.703833, 45.053879],
-              [7.705734, 45.053357],
-              [7.706131, 45.053152],
-              [7.706957, 45.052902],
-              [7.7073, 45.052887],
-              [7.708008, 45.052955],
-              [7.710251, 45.053261],
-              [7.714532, 45.055671],
-              [7.716043, 45.060767],
-              [7.71585, 45.060934],
-              [7.715679, 45.06129],
-              [7.715528, 45.061956],
-              [7.715464, 45.062941],
-              [7.715357, 45.0631],
-              [7.714756, 45.063342],
-              [7.713194, 45.063891],
-              [7.712798, 45.063989],
-              [7.711918, 45.063702],
-              [7.711307, 45.064398],
-              [7.710115, 45.065725],
-              [7.708871, 45.067035],
-              [7.70827, 45.067793],
-              [7.701223, 45.064779],
-              [7.698499, 45.062984],
-              [7.697169, 45.06178],
-              [7.695485, 45.060144],
-              [7.692651, 45.057926]
-            ]
-          }
-        }
-      ]
-    };
-
-    function getGeoJSONBounds(geojson) {
-      const bounds = new maplibregl.LngLatBounds();
-      geojson.features.forEach((feature) => {
-        const geom = feature.geometry;
-        if (!geom) return;
-        if (geom.type === 'Point') {
-          bounds.extend(geom.coordinates);
-        } else if (geom.type === 'LineString' || geom.type === 'MultiPoint') {
-          geom.coordinates.forEach((coord) => bounds.extend(coord));
-        } else if (geom.type === 'Polygon' || geom.type === 'MultiLineString') {
-          geom.coordinates.forEach((ring) => ring.forEach((coord) => bounds.extend(coord)));
-        } else if (geom.type === 'MultiPolygon') {
-          geom.coordinates.forEach((poly) =>
-            poly.forEach((ring) => ring.forEach((coord) => bounds.extend(coord)))
-          );
-        }
-      });
-      return bounds;
-    }
-
-    const territoryBounds = getGeoJSONBounds(territorio09GeoJSON);
 
     const map = new maplibregl.Map({
       container: 'map',
@@ -231,8 +355,7 @@
           }
         ]
       },
-      // Centro e zoom presi dal file uMap (Territorio 09), poi adattati al perimetro in fitBounds
-      center: [7.705297856023725, 45.06095318115622],
+      center: [7.705297856023725,45.06095318115622],
       zoom: 14,
       pitch: PITCH_2D
     });
@@ -481,40 +604,59 @@
       }
     });
 
+    // Calcola automaticamente l'inquadratura del GeoJSON
+    function fitGeoJsonBounds(geojson) {
+      const bounds = new maplibregl.LngLatBounds();
+      function extendCoords(coords) {
+        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+          bounds.extend(coords);
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extendCoords);
+        }
+      }
+      if (geojson && Array.isArray(geojson.features)) {
+        geojson.features.forEach((f) => {
+          if (f.geometry && f.geometry.coordinates) {
+            extendCoords(f.geometry.coordinates);
+          }
+        });
+      }
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, { padding: 40, duration: 0 });
+      }
+    }
+
     map.on('load', () => {
-      // Aggiunge la sorgente dati e il layer grafico del confine Territorio 09
-      map.addSource('territorio-09', {
+      map.addSource('territorio-source', {
         type: 'geojson',
-        data: territorio09GeoJSON
+        data: territorioGeoJson
       });
 
+      // Riempimento leggero per eventuali Poligoni nel GeoJSON
       map.addLayer({
-        id: 'territorio-09-line',
-        type: 'line',
-        source: 'territorio-09',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
+        id: 'territorio-fill-layer',
+        type: 'fill',
+        source: 'territorio-source',
+        filter: ['==', ['geometry-type'], 'Polygon'],
         paint: {
-          'line-color': '#0066ff',
-          'line-width': 6,
-          'line-opacity': 1
+          'fill-color': '#0066ff',
+          'fill-opacity': 0.15
         }
       });
 
-      if (!territoryBounds.isEmpty()) {
-        isProgrammaticMove = true;
-        map.fitBounds(territoryBounds, {
-          padding: 110,
-          maxZoom: 15,
-          duration: 0
-        });
-        map.once('moveend', () => {
-          isProgrammaticMove = false;
-        });
-      }
+      // Bordo blu per LineString e Poligoni
+      map.addLayer({
+        id: 'territorio-confine-layer',
+        type: 'line',
+        source: 'territorio-source',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
+      });
 
+      fitGeoJsonBounds(territorioGeoJson);
       startBackgroundTracking();
     });
   </script>

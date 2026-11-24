@@ -108,6 +108,86 @@
       }
     });
 
+    const territorioGeoJson = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "g35Wj",
+      "properties": {
+        "name": "Territorio 14",
+        "opacity": 1,
+        "weight": 4
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            7.726724,
+            45.075233
+          ],
+          [
+            7.723801,
+            45.074718
+          ],
+          [
+            7.72179,
+            45.07437
+          ],
+          [
+            7.722144,
+            45.073499
+          ],
+          [
+            7.7223,
+            45.073177
+          ],
+          [
+            7.723388,
+            45.071723
+          ],
+          [
+            7.723726,
+            45.071867
+          ],
+          [
+            7.724166,
+            45.072113
+          ],
+          [
+            7.724595,
+            45.072397
+          ],
+          [
+            7.72512,
+            45.072863
+          ],
+          [
+            7.725512,
+            45.073211
+          ],
+          [
+            7.726461,
+            45.074207
+          ],
+          [
+            7.727024,
+            45.074926
+          ],
+          [
+            7.726912,
+            45.075112
+          ],
+          [
+            7.726741,
+            45.075233
+          ]
+        ]
+      }
+    }
+  ]
+};
+
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
     const PITCH_3D = 60;
@@ -116,64 +196,6 @@
     function getTargetPitch() {
       return is3DMode ? PITCH_3D : PITCH_2D;
     }
-
-    // Dati GeoJSON del confine "Territorio 14" estratti dal file uMap
-    const territorio14GeoJSON = {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          id: 'g35Wj',
-          properties: {
-            name: 'Territorio 14',
-            opacity: 1,
-            weight: 4
-          },
-          geometry: {
-            type: 'LineString',
-            coordinates: [
-              [7.726724, 45.075233],
-              [7.723801, 45.074718],
-              [7.72179, 45.07437],
-              [7.722144, 45.073499],
-              [7.7223, 45.073177],
-              [7.723388, 45.071723],
-              [7.723726, 45.071867],
-              [7.724166, 45.072113],
-              [7.724595, 45.072397],
-              [7.72512, 45.072863],
-              [7.725512, 45.073211],
-              [7.726461, 45.074207],
-              [7.727024, 45.074926],
-              [7.726912, 45.075112],
-              [7.726741, 45.075233]
-            ]
-          }
-        }
-      ]
-    };
-
-    function getGeoJSONBounds(geojson) {
-      const bounds = new maplibregl.LngLatBounds();
-      geojson.features.forEach((feature) => {
-        const geom = feature.geometry;
-        if (!geom) return;
-        if (geom.type === 'Point') {
-          bounds.extend(geom.coordinates);
-        } else if (geom.type === 'LineString' || geom.type === 'MultiPoint') {
-          geom.coordinates.forEach((coord) => bounds.extend(coord));
-        } else if (geom.type === 'Polygon' || geom.type === 'MultiLineString') {
-          geom.coordinates.forEach((ring) => ring.forEach((coord) => bounds.extend(coord)));
-        } else if (geom.type === 'MultiPolygon') {
-          geom.coordinates.forEach((poly) =>
-            poly.forEach((ring) => ring.forEach((coord) => bounds.extend(coord)))
-          );
-        }
-      });
-      return bounds;
-    }
-
-    const territoryBounds = getGeoJSONBounds(territorio14GeoJSON);
 
     const map = new maplibregl.Map({
       container: 'map',
@@ -197,8 +219,7 @@
           }
         ]
       },
-      // Centro e zoom presi dal file uMap (Territorio 14), poi adattati al perimetro in fitBounds
-      center: [7.724589491641983, 45.07355091344944],
+      center: [7.724589491641983,45.07355091344944],
       zoom: 16,
       pitch: PITCH_2D
     });
@@ -447,40 +468,59 @@
       }
     });
 
+    // Calcola automaticamente l'inquadratura del GeoJSON
+    function fitGeoJsonBounds(geojson) {
+      const bounds = new maplibregl.LngLatBounds();
+      function extendCoords(coords) {
+        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+          bounds.extend(coords);
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extendCoords);
+        }
+      }
+      if (geojson && Array.isArray(geojson.features)) {
+        geojson.features.forEach((f) => {
+          if (f.geometry && f.geometry.coordinates) {
+            extendCoords(f.geometry.coordinates);
+          }
+        });
+      }
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, { padding: 40, duration: 0 });
+      }
+    }
+
     map.on('load', () => {
-      // Aggiunge la sorgente dati e il layer grafico del confine Territorio 14
-      map.addSource('territorio-14', {
+      map.addSource('territorio-source', {
         type: 'geojson',
-        data: territorio14GeoJSON
+        data: territorioGeoJson
       });
 
+      // Riempimento leggero per eventuali Poligoni nel GeoJSON
       map.addLayer({
-        id: 'territorio-14-line',
-        type: 'line',
-        source: 'territorio-14',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
+        id: 'territorio-fill-layer',
+        type: 'fill',
+        source: 'territorio-source',
+        filter: ['==', ['geometry-type'], 'Polygon'],
         paint: {
-          'line-color': '#0066ff',
-          'line-width': 4,
-          'line-opacity': 1
+          'fill-color': '#0066ff',
+          'fill-opacity': 0.15
         }
       });
 
-      if (!territoryBounds.isEmpty()) {
-        isProgrammaticMove = true;
-        map.fitBounds(territoryBounds, {
-          padding: 110,
-          maxZoom: 15,
-          duration: 0
-        });
-        map.once('moveend', () => {
-          isProgrammaticMove = false;
-        });
-      }
+      // Bordo blu per LineString e Poligoni
+      map.addLayer({
+        id: 'territorio-confine-layer',
+        type: 'line',
+        source: 'territorio-source',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
+      });
 
+      fitGeoJsonBounds(territorioGeoJson);
       startBackgroundTracking();
     });
   </script>

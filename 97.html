@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <!-- Tag Open Graph per anteprima link -->
+<!-- Tag Open Graph per anteprima link -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Territorio 97 – Torino Reiss" />
   <meta property="og:description" content="Mappa interattiva con confini e navigatore Course-Up" />
@@ -108,53 +108,137 @@
       }
     });
 
-    const mieiPoligoni = {
-      "type": "FeatureCollection",
-      "features": [
-        {
-          "type": "Feature",
-          "geometry": {
-            "coordinates": [
-              [7.677025, 45.104736],
-              [7.677234, 45.105887],
-              [7.677384, 45.106996],
-              [7.677593, 45.10817],
-              [7.67769, 45.10901],
-              [7.677878, 45.109919],
-              [7.677937, 45.11026],
-              [7.678522, 45.11311],
-              [7.67055, 45.114193],
-              [7.667384, 45.114602],
-              [7.667057, 45.111073],
-              [7.666987, 45.110706],
-              [7.666896, 45.109885],
-              [7.666842, 45.109317],
-              [7.666778, 45.108692],
-              [7.666714, 45.108189],
-              [7.666553, 45.106773],
-              [7.666424, 45.105932],
-              [7.666359, 45.105364],
-              [7.667652, 45.105281],
-              [7.668323, 45.105247],
-              [7.6685, 45.105228],
-              [7.669622, 45.105163],
-              [7.670657, 45.105107],
-              [7.67232, 45.105012],
-              [7.67379, 45.104929],
-              [7.677019, 45.104736],
-              [7.676559, 45.104755]
-            ],
-            "type": "LineString"
-          },
-          "properties": {
-            "_umap_options": {
-              "opacity": 1,
-              "weight": 5
-            }
-          }
+    const territorioGeoJson = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "coordinates": [
+          [
+            7.677025,
+            45.104736
+          ],
+          [
+            7.677234,
+            45.105887
+          ],
+          [
+            7.677384,
+            45.106996
+          ],
+          [
+            7.677593,
+            45.10817
+          ],
+          [
+            7.67769,
+            45.10901
+          ],
+          [
+            7.677878,
+            45.109919
+          ],
+          [
+            7.677937,
+            45.11026
+          ],
+          [
+            7.678522,
+            45.11311
+          ],
+          [
+            7.67055,
+            45.114193
+          ],
+          [
+            7.667384,
+            45.114602
+          ],
+          [
+            7.667057,
+            45.111073
+          ],
+          [
+            7.666987,
+            45.110706
+          ],
+          [
+            7.666896,
+            45.109885
+          ],
+          [
+            7.666842,
+            45.109317
+          ],
+          [
+            7.666778,
+            45.108692
+          ],
+          [
+            7.666714,
+            45.108189
+          ],
+          [
+            7.666553,
+            45.106773
+          ],
+          [
+            7.666424,
+            45.105932
+          ],
+          [
+            7.666359,
+            45.105364
+          ],
+          [
+            7.667652,
+            45.105281
+          ],
+          [
+            7.668323,
+            45.105247
+          ],
+          [
+            7.6685,
+            45.105228
+          ],
+          [
+            7.669622,
+            45.105163
+          ],
+          [
+            7.670657,
+            45.105107
+          ],
+          [
+            7.67232,
+            45.105012
+          ],
+          [
+            7.67379,
+            45.104929
+          ],
+          [
+            7.677019,
+            45.104736
+          ],
+          [
+            7.676559,
+            45.104755
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "_umap_options": {
+          "opacity": 1,
+          "weight": 5
         }
-      ]
-    };
+      }
+    }
+  ]
+};
 
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
@@ -187,7 +271,7 @@
           }
         ]
       },
-      center: [7.672, 45.109],
+      center: [7.672,45.109],
       zoom: 14,
       pitch: PITCH_2D
     });
@@ -351,13 +435,14 @@
     `;
     wrapperEl.appendChild(arrowEl);
 
+    // Pulsante mirino GPS manuale (non sposta la mappa finché non lo premi)
     const geolocate = new maplibregl.GeolocateControl({
       positionOptions: {
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 5000
       },
-      trackUserLocation: true,
+      trackUserLocation: false,
       showUserLocation: false,
       showAccuracyCircle: false
     });
@@ -388,6 +473,7 @@
         navMarker.setRotation(lastHeading);
       }
 
+      // Sposta la camera solo se l'utente ha attivato Course-Up
       if (courseUpEnabled) {
         moveCameraSafe({
           center: lastCoords,
@@ -404,21 +490,19 @@
       updateNavigationView([longitude, latitude], heading);
     });
 
-    // Prima stima veloce tramite rete/cache in attesa che il GPS ad alta precisione agganci
-    function requestFastInitialPosition() {
+    // Tracciamento GPS in background: aggiorna la freccia senza spostare l'inquadratura iniziale
+    function startBackgroundTracking() {
       if (!('geolocation' in navigator)) return;
-      navigator.geolocation.getCurrentPosition(
+      navigator.geolocation.watchPosition(
         (pos) => {
-          if (!lastCoords) {
-            const { longitude, latitude, heading } = pos.coords;
-            updateNavigationView([longitude, latitude], heading);
-          }
+          const { longitude, latitude, heading } = pos.coords;
+          updateNavigationView([longitude, latitude], heading);
         },
         () => {},
         {
-          enableHighAccuracy: false,
-          maximumAge: 60000,
-          timeout: 3000
+          enableHighAccuracy: true,
+          maximumAge: 5000,
+          timeout: 10000
         }
       );
     }
@@ -436,37 +520,60 @@
       }
     });
 
+    // Calcola automaticamente l'inquadratura del GeoJSON
+    function fitGeoJsonBounds(geojson) {
+      const bounds = new maplibregl.LngLatBounds();
+      function extendCoords(coords) {
+        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+          bounds.extend(coords);
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extendCoords);
+        }
+      }
+      if (geojson && Array.isArray(geojson.features)) {
+        geojson.features.forEach((f) => {
+          if (f.geometry && f.geometry.coordinates) {
+            extendCoords(f.geometry.coordinates);
+          }
+        });
+      }
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, { padding: 40, duration: 0 });
+      }
+    }
+
     map.on('load', () => {
-      map.addSource('confini', {
+      map.addSource('territorio-source', {
         type: 'geojson',
-        data: mieiPoligoni
+        data: territorioGeoJson
       });
 
+      // Riempimento leggero per eventuali Poligoni nel GeoJSON
       map.addLayer({
-        id: 'poligoni-bordo',
-        type: 'line',
-        source: 'confini',
+        id: 'territorio-fill-layer',
+        type: 'fill',
+        source: 'territorio-source',
+        filter: ['==', ['geometry-type'], 'Polygon'],
         paint: {
-          'line-color': '#0066ff',
-          'line-width': 4
+          'fill-color': '#0066ff',
+          'fill-opacity': 0.15
         }
       });
 
-      const coords = mieiPoligoni.features[0]?.geometry?.coordinates || [];
-      if (coords.length > 0) {
-        const bounds = coords.reduce(
-          (b, coord) => b.extend(coord),
-          new maplibregl.LngLatBounds(coords[0], coords[0])
-        );
-        isProgrammaticMove = true;
-        map.fitBounds(bounds, { padding: 40 });
-        map.once('moveend', () => {
-          isProgrammaticMove = false;
-        });
-      }
+      // Bordo blu per LineString e Poligoni
+      map.addLayer({
+        id: 'territorio-confine-layer',
+        type: 'line',
+        source: 'territorio-source',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
+      });
 
-      requestFastInitialPosition();
-      geolocate.trigger();
+      fitGeoJsonBounds(territorioGeoJson);
+      startBackgroundTracking();
     });
   </script>
 </body>

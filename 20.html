@@ -108,6 +108,74 @@
       }
     });
 
+    const territorioGeoJson = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "E5ODg",
+      "properties": {
+        "name": "Territorio 20",
+        "opacity": 1,
+        "weight": 5
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            7.685158,
+            45.078983
+          ],
+          [
+            7.687687,
+            45.078226
+          ],
+          [
+            7.687272,
+            45.077559
+          ],
+          [
+            7.68695,
+            45.077014
+          ],
+          [
+            7.686773,
+            45.076628
+          ],
+          [
+            7.686354,
+            45.076022
+          ],
+          [
+            7.68497,
+            45.076472
+          ],
+          [
+            7.685217,
+            45.076862
+          ],
+          [
+            7.684905,
+            45.077396
+          ],
+          [
+            7.684213,
+            45.077627
+          ],
+          [
+            7.684793,
+            45.078478
+          ],
+          [
+            7.685147,
+            45.078966
+          ]
+        ]
+      }
+    }
+  ]
+};
+
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
     const PITCH_3D = 60;
@@ -116,61 +184,6 @@
     function getTargetPitch() {
       return is3DMode ? PITCH_3D : PITCH_2D;
     }
-
-    // Dati GeoJSON del confine "Territorio 20" estratti dal file uMap
-    const territorio20GeoJSON = {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          id: 'E5ODg',
-          properties: {
-            name: 'Territorio 20',
-            opacity: 1,
-            weight: 5
-          },
-          geometry: {
-            type: 'LineString',
-            coordinates: [
-              [7.685158, 45.078983],
-              [7.687687, 45.078226],
-              [7.687272, 45.077559],
-              [7.68695, 45.077014],
-              [7.686773, 45.076628],
-              [7.686354, 45.076022],
-              [7.68497, 45.076472],
-              [7.685217, 45.076862],
-              [7.684905, 45.077396],
-              [7.684213, 45.077627],
-              [7.684793, 45.078478],
-              [7.685147, 45.078966]
-            ]
-          }
-        }
-      ]
-    };
-
-    function getGeoJSONBounds(geojson) {
-      const bounds = new maplibregl.LngLatBounds();
-      geojson.features.forEach((feature) => {
-        const geom = feature.geometry;
-        if (!geom) return;
-        if (geom.type === 'Point') {
-          bounds.extend(geom.coordinates);
-        } else if (geom.type === 'LineString' || geom.type === 'MultiPoint') {
-          geom.coordinates.forEach((coord) => bounds.extend(coord));
-        } else if (geom.type === 'Polygon' || geom.type === 'MultiLineString') {
-          geom.coordinates.forEach((ring) => ring.forEach((coord) => bounds.extend(coord)));
-        } else if (geom.type === 'MultiPolygon') {
-          geom.coordinates.forEach((poly) =>
-            poly.forEach((ring) => ring.forEach((coord) => bounds.extend(coord)))
-          );
-        }
-      });
-      return bounds;
-    }
-
-    const territoryBounds = getGeoJSONBounds(territorio20GeoJSON);
 
     const map = new maplibregl.Map({
       container: 'map',
@@ -194,8 +207,7 @@
           }
         ]
       },
-      // Centro e zoom presi dal file uMap (Territorio 20), poi adattati al perimetro in fitBounds
-      center: [7.686170881160695, 45.07770290912626],
+      center: [7.686170881160695,45.07770290912626],
       zoom: 17,
       pitch: PITCH_2D
     });
@@ -444,40 +456,59 @@
       }
     });
 
+    // Calcola automaticamente l'inquadratura del GeoJSON
+    function fitGeoJsonBounds(geojson) {
+      const bounds = new maplibregl.LngLatBounds();
+      function extendCoords(coords) {
+        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+          bounds.extend(coords);
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extendCoords);
+        }
+      }
+      if (geojson && Array.isArray(geojson.features)) {
+        geojson.features.forEach((f) => {
+          if (f.geometry && f.geometry.coordinates) {
+            extendCoords(f.geometry.coordinates);
+          }
+        });
+      }
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, { padding: 40, duration: 0 });
+      }
+    }
+
     map.on('load', () => {
-      // Aggiunge la sorgente dati e il layer grafico del confine Territorio 20
-      map.addSource('territorio-20', {
+      map.addSource('territorio-source', {
         type: 'geojson',
-        data: territorio20GeoJSON
+        data: territorioGeoJson
       });
 
+      // Riempimento leggero per eventuali Poligoni nel GeoJSON
       map.addLayer({
-        id: 'territorio-20-line',
-        type: 'line',
-        source: 'territorio-20',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
+        id: 'territorio-fill-layer',
+        type: 'fill',
+        source: 'territorio-source',
+        filter: ['==', ['geometry-type'], 'Polygon'],
         paint: {
-          'line-color': '#0066ff',
-          'line-width': 5,
-          'line-opacity': 1
+          'fill-color': '#0066ff',
+          'fill-opacity': 0.15
         }
       });
 
-      if (!territoryBounds.isEmpty()) {
-        isProgrammaticMove = true;
-        map.fitBounds(territoryBounds, {
-          padding: 110,
-          maxZoom: 15,
-          duration: 0
-        });
-        map.once('moveend', () => {
-          isProgrammaticMove = false;
-        });
-      }
+      // Bordo blu per LineString e Poligoni
+      map.addLayer({
+        id: 'territorio-confine-layer',
+        type: 'line',
+        source: 'territorio-source',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
+      });
 
+      fitGeoJsonBounds(territorioGeoJson);
       startBackgroundTracking();
     });
   </script>

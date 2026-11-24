@@ -108,6 +108,120 @@
       }
     });
 
+    const territorioGeoJson = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "cwODc",
+      "properties": {
+        "name": "Territorio 25"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            7.688954,
+            45.084691
+          ],
+          [
+            7.691289,
+            45.083954
+          ],
+          [
+            7.692169,
+            45.083681
+          ],
+          [
+            7.69263,
+            45.084355
+          ],
+          [
+            7.692834,
+            45.084685
+          ],
+          [
+            7.693049,
+            45.085264
+          ],
+          [
+            7.693129,
+            45.086153
+          ],
+          [
+            7.692925,
+            45.086183
+          ],
+          [
+            7.692736,
+            45.086271
+          ],
+          [
+            7.692646,
+            45.086437
+          ],
+          [
+            7.692652,
+            45.086592
+          ],
+          [
+            7.692029,
+            45.086963
+          ],
+          [
+            7.691455,
+            45.087273
+          ],
+          [
+            7.690832,
+            45.087576
+          ],
+          [
+            7.690446,
+            45.086986
+          ],
+          [
+            7.690108,
+            45.086471
+          ],
+          [
+            7.689845,
+            45.086002
+          ],
+          [
+            7.68962,
+            45.085756
+          ],
+          [
+            7.689367,
+            45.085336
+          ],
+          [
+            7.68896,
+            45.084699
+          ],
+          [
+            7.68896,
+            45.084684
+          ],
+          [
+            7.689024,
+            45.084786
+          ],
+          [
+            7.689083,
+            45.084885
+          ],
+          [
+            7.689147,
+            45.084972
+          ]
+        ]
+      }
+    }
+  ]
+};
+
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
     const PITCH_3D = 60;
@@ -115,95 +229,6 @@
 
     function getTargetPitch() {
       return is3DMode ? PITCH_3D : PITCH_2D;
-    }
-
-    // Dati GeoJSON del Territorio 25 estratti dal file uMap
-    const territorio25GeoJSON = {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          id: 'cwODc',
-          properties: {
-            name: 'Territorio 25'
-          },
-          geometry: {
-            type: 'LineString',
-            coordinates: [
-              [7.688954, 45.084691],
-              [7.691289, 45.083954],
-              [7.692169, 45.083681],
-              [7.69263, 45.084355],
-              [7.692834, 45.084685],
-              [7.693049, 45.085264],
-              [7.693129, 45.086153],
-              [7.692925, 45.086183],
-              [7.692736, 45.086271],
-              [7.692646, 45.086437],
-              [7.692652, 45.086592],
-              [7.692029, 45.086963],
-              [7.691455, 45.087273],
-              [7.690832, 45.087576],
-              [7.690446, 45.086986],
-              [7.690108, 45.086471],
-              [7.689845, 45.086002],
-              [7.68962, 45.085756],
-              [7.689367, 45.085336],
-              [7.68896, 45.084699],
-              [7.68896, 45.084684],
-              [7.689024, 45.084786],
-              [7.689083, 45.084885],
-              [7.689147, 45.084972]
-            ]
-          }
-        }
-      ]
-    };
-
-    // Estrae tutte le coordinate [lon, lat] da un GeoJSON per calcolare l'inquadratura completa
-    function extractCoords(geojson) {
-      const coords = [];
-      function walk(node) {
-        if (!node) return;
-        if (Array.isArray(node)) {
-          if (node.length >= 2 && typeof node[0] === 'number' && typeof node[1] === 'number') {
-            coords.push([node[0], node[1]]);
-          } else {
-            for (const item of node) walk(item);
-          }
-        } else if (typeof node === 'object') {
-          if (node.type === 'FeatureCollection' && Array.isArray(node.features)) {
-            node.features.forEach(walk);
-          } else if (node.type === 'Feature') {
-            walk(node.geometry);
-          } else if (node.coordinates) {
-            walk(node.coordinates);
-          }
-        }
-      }
-      walk(geojson);
-      return coords;
-    }
-
-    function fitBoundsToGeoJSON(mapInstance, geojson, animate = false) {
-      const points = extractCoords(geojson);
-      if (!points.length) return;
-
-      const bounds = new maplibregl.LngLatBounds(points[0], points[0]);
-      for (const pt of points) {
-        bounds.extend(pt);
-      }
-
-      const isMobile = window.innerWidth < 768;
-      const padding = isMobile
-        ? { top: 65, bottom: 55, left: 35, right: 35 }
-        : { top: 75, bottom: 65, left: 75, right: 95 };
-
-      mapInstance.fitBounds(bounds, {
-        padding,
-        maxZoom: 18,
-        duration: animate ? 500 : 0
-      });
     }
 
     const map = new maplibregl.Map({
@@ -228,7 +253,7 @@
           }
         ]
       },
-      center: [7.69137119568074, 45.08635307209277],
+      center: [7.69137119568074,45.08635307209277],
       zoom: 16,
       pitch: PITCH_2D
     });
@@ -477,31 +502,59 @@
       }
     });
 
+    // Calcola automaticamente l'inquadratura del GeoJSON
+    function fitGeoJsonBounds(geojson) {
+      const bounds = new maplibregl.LngLatBounds();
+      function extendCoords(coords) {
+        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+          bounds.extend(coords);
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extendCoords);
+        }
+      }
+      if (geojson && Array.isArray(geojson.features)) {
+        geojson.features.forEach((f) => {
+          if (f.geometry && f.geometry.coordinates) {
+            extendCoords(f.geometry.coordinates);
+          }
+        });
+      }
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, { padding: 40, duration: 0 });
+      }
+    }
+
     map.on('load', () => {
-      // Aggiunta sorgente e layer dei confini del Territorio 25
-      map.addSource('territorio-25-source', {
+      map.addSource('territorio-source', {
         type: 'geojson',
-        data: territorio25GeoJSON
+        data: territorioGeoJson
       });
 
+      // Riempimento leggero per eventuali Poligoni nel GeoJSON
       map.addLayer({
-        id: 'territorio-25-line',
-        type: 'line',
-        source: 'territorio-25-source',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
+        id: 'territorio-fill-layer',
+        type: 'fill',
+        source: 'territorio-source',
+        filter: ['==', ['geometry-type'], 'Polygon'],
         paint: {
-          'line-color': '#0066ff',
-          'line-width': 5,
-          'line-opacity': 1
+          'fill-color': '#0066ff',
+          'fill-opacity': 0.15
         }
       });
 
-      // Zoom automatico iniziale per inquadrare tutto il confine su PC e smartphone
-      fitBoundsToGeoJSON(map, territorio25GeoJSON, false);
+      // Bordo blu per LineString e Poligoni
+      map.addLayer({
+        id: 'territorio-confine-layer',
+        type: 'line',
+        source: 'territorio-source',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
+      });
 
+      fitGeoJsonBounds(territorioGeoJson);
       startBackgroundTracking();
     });
   </script>

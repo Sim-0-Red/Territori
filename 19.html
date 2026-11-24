@@ -108,6 +108,122 @@
       }
     });
 
+    const territorioGeoJson = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "AyMDY",
+      "properties": {
+        "name": "Territorio 19",
+        "opacity": 1,
+        "weight": 5
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            7.688553,
+            45.079
+          ],
+          [
+            7.687694,
+            45.077576
+          ],
+          [
+            7.687448,
+            45.07713
+          ],
+          [
+            7.687174,
+            45.07657
+          ],
+          [
+            7.686745,
+            45.075896
+          ],
+          [
+            7.688628,
+            45.075286
+          ],
+          [
+            7.689921,
+            45.074836
+          ],
+          [
+            7.691391,
+            45.074359
+          ],
+          [
+            7.692641,
+            45.073938
+          ],
+          [
+            7.693704,
+            45.073609
+          ],
+          [
+            7.693935,
+            45.073518
+          ],
+          [
+            7.694047,
+            45.073658
+          ],
+          [
+            7.693275,
+            45.073995
+          ],
+          [
+            7.692979,
+            45.074154
+          ],
+          [
+            7.692715,
+            45.074354
+          ],
+          [
+            7.691987,
+            45.075066
+          ],
+          [
+            7.691509,
+            45.075494
+          ],
+          [
+            7.691337,
+            45.075755
+          ],
+          [
+            7.690699,
+            45.076319
+          ],
+          [
+            7.690489,
+            45.076524
+          ],
+          [
+            7.690178,
+            45.076925
+          ],
+          [
+            7.689561,
+            45.077697
+          ],
+          [
+            7.689096,
+            45.078283
+          ],
+          [
+            7.68857,
+            45.078972
+          ]
+        ]
+      }
+    }
+  ]
+};
+
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
     const PITCH_3D = 60;
@@ -116,73 +232,6 @@
     function getTargetPitch() {
       return is3DMode ? PITCH_3D : PITCH_2D;
     }
-
-    // Dati GeoJSON del confine "Territorio 19" estratti dal file uMap
-    const territorio19GeoJSON = {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          id: 'AyMDY',
-          properties: {
-            name: 'Territorio 19',
-            opacity: 1,
-            weight: 5
-          },
-          geometry: {
-            type: 'LineString',
-            coordinates: [
-              [7.688553, 45.079],
-              [7.687694, 45.077576],
-              [7.687448, 45.07713],
-              [7.687174, 45.07657],
-              [7.686745, 45.075896],
-              [7.688628, 45.075286],
-              [7.689921, 45.074836],
-              [7.691391, 45.074359],
-              [7.692641, 45.073938],
-              [7.693704, 45.073609],
-              [7.693935, 45.073518],
-              [7.694047, 45.073658],
-              [7.693275, 45.073995],
-              [7.692979, 45.074154],
-              [7.692715, 45.074354],
-              [7.691987, 45.075066],
-              [7.691509, 45.075494],
-              [7.691337, 45.075755],
-              [7.690699, 45.076319],
-              [7.690489, 45.076524],
-              [7.690178, 45.076925],
-              [7.689561, 45.077697],
-              [7.689096, 45.078283],
-              [7.68857, 45.078972]
-            ]
-          }
-        }
-      ]
-    };
-
-    function getGeoJSONBounds(geojson) {
-      const bounds = new maplibregl.LngLatBounds();
-      geojson.features.forEach((feature) => {
-        const geom = feature.geometry;
-        if (!geom) return;
-        if (geom.type === 'Point') {
-          bounds.extend(geom.coordinates);
-        } else if (geom.type === 'LineString' || geom.type === 'MultiPoint') {
-          geom.coordinates.forEach((coord) => bounds.extend(coord));
-        } else if (geom.type === 'Polygon' || geom.type === 'MultiLineString') {
-          geom.coordinates.forEach((ring) => ring.forEach((coord) => bounds.extend(coord)));
-        } else if (geom.type === 'MultiPolygon') {
-          geom.coordinates.forEach((poly) =>
-            poly.forEach((ring) => ring.forEach((coord) => bounds.extend(coord)))
-          );
-        }
-      });
-      return bounds;
-    }
-
-    const territoryBounds = getGeoJSONBounds(territorio19GeoJSON);
 
     const map = new maplibregl.Map({
       container: 'map',
@@ -206,8 +255,7 @@
           }
         ]
       },
-      // Centro e zoom presi dal file uMap (Territorio 19), poi adattati al perimetro in fitBounds
-      center: [7.690882559107137, 45.0766732504946],
+      center: [7.690882559107137,45.0766732504946],
       zoom: 16,
       pitch: PITCH_2D
     });
@@ -456,40 +504,59 @@
       }
     });
 
+    // Calcola automaticamente l'inquadratura del GeoJSON
+    function fitGeoJsonBounds(geojson) {
+      const bounds = new maplibregl.LngLatBounds();
+      function extendCoords(coords) {
+        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+          bounds.extend(coords);
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extendCoords);
+        }
+      }
+      if (geojson && Array.isArray(geojson.features)) {
+        geojson.features.forEach((f) => {
+          if (f.geometry && f.geometry.coordinates) {
+            extendCoords(f.geometry.coordinates);
+          }
+        });
+      }
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, { padding: 40, duration: 0 });
+      }
+    }
+
     map.on('load', () => {
-      // Aggiunge la sorgente dati e il layer grafico del confine Territorio 19
-      map.addSource('territorio-19', {
+      map.addSource('territorio-source', {
         type: 'geojson',
-        data: territorio19GeoJSON
+        data: territorioGeoJson
       });
 
+      // Riempimento leggero per eventuali Poligoni nel GeoJSON
       map.addLayer({
-        id: 'territorio-19-line',
-        type: 'line',
-        source: 'territorio-19',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
+        id: 'territorio-fill-layer',
+        type: 'fill',
+        source: 'territorio-source',
+        filter: ['==', ['geometry-type'], 'Polygon'],
         paint: {
-          'line-color': '#0066ff',
-          'line-width': 5,
-          'line-opacity': 1
+          'fill-color': '#0066ff',
+          'fill-opacity': 0.15
         }
       });
 
-      if (!territoryBounds.isEmpty()) {
-        isProgrammaticMove = true;
-        map.fitBounds(territoryBounds, {
-          padding: 110,
-          maxZoom: 15,
-          duration: 0
-        });
-        map.once('moveend', () => {
-          isProgrammaticMove = false;
-        });
-      }
+      // Bordo blu per LineString e Poligoni
+      map.addLayer({
+        id: 'territorio-confine-layer',
+        type: 'line',
+        source: 'territorio-source',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
+      });
 
+      fitGeoJsonBounds(territorioGeoJson);
       startBackgroundTracking();
     });
   </script>

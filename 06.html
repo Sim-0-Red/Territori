@@ -108,119 +108,85 @@
       }
     });
 
-    // Dati uMap esportati
-    const umapData = {
-      "type": "umap",
+    const territorioGeoJson = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
       "geometry": {
-        "type": "Point",
-        "coordinates": [7.695537406206588, 45.071567452978954]
+        "coordinates": [
+          [
+            7.690228,
+            45.074372
+          ],
+          [
+            7.700863,
+            45.070781
+          ],
+          [
+            7.700262,
+            45.070282
+          ],
+          [
+            7.699961,
+            45.070426
+          ],
+          [
+            7.698899,
+            45.0696
+          ],
+          [
+            7.699049,
+            45.069373
+          ],
+          [
+            7.697739,
+            45.068317
+          ],
+          [
+            7.696934,
+            45.067688
+          ]
+        ],
+        "type": "LineString"
       },
       "properties": {
-        "name": "Territorio 06",
-        "zoom": 16,
-        "center": {
-          "lat": 45.071567452978954,
-          "lng": 7.695537406206588
+        "_umap_options": {
+          "opacity": 1,
+          "weight": 5
         }
       },
-      "layers": [
-        {
-          "type": "FeatureCollection",
-          "features": [
-            {
-              "type": "Feature",
-              "geometry": {
-                "coordinates": [
-                  [7.690228, 45.074372],
-                  [7.700863, 45.070781],
-                  [7.700262, 45.070282],
-                  [7.699961, 45.070426],
-                  [7.698899, 45.0696],
-                  [7.699049, 45.069373],
-                  [7.697739, 45.068317],
-                  [7.696934, 45.067688]
-                ],
-                "type": "LineString"
-              },
-              "properties": {
-                "_umap_options": {
-                  "opacity": 1,
-                  "weight": 5
-                }
-              },
-              "id": "c3ODA"
-            },
-            {
-              "type": "Feature",
-              "geometry": {
-                "coordinates": [
-                  [7.696934, 45.067718],
-                  [7.691505, 45.073196],
-                  [7.690229, 45.074355]
-                ],
-                "type": "LineString"
-              },
-              "properties": {
-                "_umap_options": {
-                  "opacity": 1,
-                  "weight": 5
-                }
-              },
-              "id": "A5MjY"
-            }
+      "id": "c3ODA"
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "coordinates": [
+          [
+            7.696934,
+            45.067718
+          ],
+          [
+            7.691505,
+            45.073196
+          ],
+          [
+            7.690229,
+            45.074355
           ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "_umap_options": {
+          "opacity": 1,
+          "weight": 5
         }
-      ]
-    }; //[cite: 3]
-
-    // Estrae tutte le feature dai layer del file uMap in un unico FeatureCollection GeoJSON
-    function extractGeoJSONFromUmap(umap) {
-      const features = [];
-      if (Array.isArray(umap?.layers)) {
-        umap.layers.forEach((layer) => {
-          if (Array.isArray(layer?.features)) {
-            layer.features.forEach((f) => {
-              const opts = f?.properties?._umap_options || {};
-              features.push({
-                ...f,
-                properties: {
-                  ...(f.properties || {}),
-                  weight: typeof opts.weight === 'number' ? opts.weight : 5,
-                  opacity: typeof opts.opacity === 'number' ? opts.opacity : 1
-                }
-              });
-            });
-          }
-        });
-      }
-      return {
-        type: 'FeatureCollection',
-        features
-      };
+      },
+      "id": "A5MjY"
     }
-
-    const territorio06GeoJSON = extractGeoJSONFromUmap(umapData);
-
-    function getGeoJSONBounds(geojson) {
-      const bounds = new maplibregl.LngLatBounds();
-      let hasCoords = false;
-
-      function walk(coords) {
-        if (!Array.isArray(coords)) return;
-        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-          bounds.extend([coords[0], coords[1]]);
-          hasCoords = true;
-          return;
-        }
-        coords.forEach(walk);
-      }
-
-      if (geojson?.features) {
-        geojson.features.forEach((f) => walk(f?.geometry?.coordinates));
-      }
-
-      return hasCoords ? bounds : null;
-    }
+  ]
+};
 
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
@@ -230,11 +196,6 @@
     function getTargetPitch() {
       return is3DMode ? PITCH_3D : PITCH_2D;
     }
-
-    const initialBounds = getGeoJSONBounds(territorio06GeoJSON);
-    const defaultCenter = umapData?.properties?.center
-      ? [umapData.properties.center.lng, umapData.properties.center.lat]
-      : [7.6869, 45.0703]; //[cite: 3]
 
     const map = new maplibregl.Map({
       container: 'map',
@@ -258,8 +219,8 @@
           }
         ]
       },
-      center: initialBounds ? initialBounds.getCenter() : defaultCenter,
-      zoom: umapData?.properties?.zoom || 16, //[cite: 3]
+      center: [7.6955455,45.07102999999999],
+      zoom: 15,
       pitch: PITCH_2D
     });
 
@@ -275,19 +236,6 @@
     function moveCameraSafe(options) {
       isProgrammaticMove = true;
       map.easeTo(options);
-      map.once('moveend', () => {
-        isProgrammaticMove = false;
-      });
-    }
-
-    function fitTerritorio(animate = false) {
-      if (!initialBounds) return;
-      isProgrammaticMove = true;
-      map.fitBounds(initialBounds, {
-        padding: { top: 50, bottom: 50, left: 40, right: 60 },
-        maxZoom: 16,
-        duration: animate ? 500 : 0
-      });
       map.once('moveend', () => {
         isProgrammaticMove = false;
       });
@@ -520,29 +468,59 @@
       }
     });
 
-    map.on('load', () => {
-      fitTerritorio(false);
+    // Calcola automaticamente l'inquadratura del GeoJSON
+    function fitGeoJsonBounds(geojson) {
+      const bounds = new maplibregl.LngLatBounds();
+      function extendCoords(coords) {
+        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+          bounds.extend(coords);
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extendCoords);
+        }
+      }
+      if (geojson && Array.isArray(geojson.features)) {
+        geojson.features.forEach((f) => {
+          if (f.geometry && f.geometry.coordinates) {
+            extendCoords(f.geometry.coordinates);
+          }
+        });
+      }
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, { padding: 40, duration: 0 });
+      }
+    }
 
-      map.addSource('territorio-06', {
+    map.on('load', () => {
+      map.addSource('territorio-source', {
         type: 'geojson',
-        data: territorio06GeoJSON
+        data: territorioGeoJson
       });
 
+      // Riempimento leggero per eventuali Poligoni nel GeoJSON
       map.addLayer({
-        id: 'territorio-06-linee',
-        type: 'line',
-        source: 'territorio-06',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
+        id: 'territorio-fill-layer',
+        type: 'fill',
+        source: 'territorio-source',
+        filter: ['==', ['geometry-type'], 'Polygon'],
         paint: {
-          'line-color': '#0066ff',
-          'line-width': ['coalesce', ['get', 'weight'], 5],
-          'line-opacity': ['coalesce', ['get', 'opacity'], 1]
+          'fill-color': '#0066ff',
+          'fill-opacity': 0.15
         }
       });
 
+      // Bordo blu per LineString e Poligoni
+      map.addLayer({
+        id: 'territorio-confine-layer',
+        type: 'line',
+        source: 'territorio-source',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
+      });
+
+      fitGeoJsonBounds(territorioGeoJson);
       startBackgroundTracking();
     });
   </script>

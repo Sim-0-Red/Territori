@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <!-- Tag Open Graph per anteprima link -->
+<!-- Tag Open Graph per anteprima link -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Territorio 02 – Torino Centro" />
   <meta property="og:description" content="Mappa interattiva con confini e navigatore Course-Up" />
@@ -109,50 +109,86 @@
     });
 
     const territorioGeoJson = {
-      "type": "FeatureCollection",
-      "features": [
-        {
-          "type": "Feature",
-          "geometry": {
-            "coordinates": [
-              [7.686055, 45.062156],
-              [7.685067, 45.06071]
-            ],
-            "type": "LineString"
-          },
-          "properties": {
-            "_umap_options": {
-              "opacity": 1,
-              "weight": 5
-            }
-          }
-        },
-        {
-          "type": "Feature",
-          "geometry": {
-            "coordinates": [
-              [7.685055, 45.060714],
-              [7.691526, 45.058489],
-              [7.692342, 45.059693],
-              [7.692857, 45.060246],
-              [7.69451, 45.061897],
-              [7.695015, 45.062358],
-              [7.69172, 45.063562],
-              [7.689487, 45.064403],
-              [7.687986, 45.064914],
-              [7.686065, 45.062179]
-            ],
-            "type": "LineString"
-          },
-          "properties": {
-            "_umap_options": {
-              "opacity": 1,
-              "weight": 5
-            }
-          }
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "coordinates": [
+          [
+            7.686055,
+            45.062156
+          ],
+          [
+            7.685067,
+            45.06071
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "_umap_options": {
+          "opacity": 1,
+          "weight": 5
         }
-      ]
-    };
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "coordinates": [
+          [
+            7.685055,
+            45.060714
+          ],
+          [
+            7.691526,
+            45.058489
+          ],
+          [
+            7.692342,
+            45.059693
+          ],
+          [
+            7.692857,
+            45.060246
+          ],
+          [
+            7.69451,
+            45.061897
+          ],
+          [
+            7.695015,
+            45.062358
+          ],
+          [
+            7.69172,
+            45.063562
+          ],
+          [
+            7.689487,
+            45.064403
+          ],
+          [
+            7.687986,
+            45.064914
+          ],
+          [
+            7.686065,
+            45.062179
+          ]
+        ],
+        "type": "LineString"
+      },
+      "properties": {
+        "_umap_options": {
+          "opacity": 1,
+          "weight": 5
+        }
+      }
+    }
+  ]
+};
 
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
@@ -185,7 +221,7 @@
           }
         ]
       },
-      center: [7.6898, 45.0618],
+      center: [7.6898,45.0618],
       zoom: 15,
       pitch: PITCH_2D
     });

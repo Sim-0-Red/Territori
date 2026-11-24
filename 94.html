@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <!-- Tag Open Graph per anteprima link -->
+<!-- Tag Open Graph per anteprima link -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Territorio 94 – Torino Breglio" />
   <meta property="og:description" content="Mappa interattiva con confini e navigatore Course-Up" />
@@ -109,33 +109,60 @@
     });
 
     const territorioGeoJson = {
-      "type": "FeatureCollection",
-      "features": [
-        {
-          "type": "Feature",
-          "geometry": {
-            "type": "LineString",
-            "coordinates": [
-              [7.680602, 45.09889],
-              [7.680897, 45.100821],
-              [7.683311, 45.100677],
-              [7.683172, 45.099643],
-              [7.68513, 45.099507],
-              [7.685655, 45.098504],
-              [7.68535, 45.098519],
-              [7.681831, 45.098765],
-              [7.680629, 45.098878]
-            ]
-          },
-          "properties": {
-            "_umap_options": {
-              "opacity": 1,
-              "weight": 6
-            }
-          }
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            7.680602,
+            45.09889
+          ],
+          [
+            7.680897,
+            45.100821
+          ],
+          [
+            7.683311,
+            45.100677
+          ],
+          [
+            7.683172,
+            45.099643
+          ],
+          [
+            7.68513,
+            45.099507
+          ],
+          [
+            7.685655,
+            45.098504
+          ],
+          [
+            7.68535,
+            45.098519
+          ],
+          [
+            7.681831,
+            45.098765
+          ],
+          [
+            7.680629,
+            45.098878
+          ]
+        ]
+      },
+      "properties": {
+        "_umap_options": {
+          "opacity": 1,
+          "weight": 6
         }
-      ]
-    };
+      }
+    }
+  ]
+};
 
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
@@ -168,7 +195,7 @@
           }
         ]
       },
-      center: [7.6831, 45.0996],
+      center: [7.6831,45.0996],
       zoom: 15,
       pitch: PITCH_2D
     });

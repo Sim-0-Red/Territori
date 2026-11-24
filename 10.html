@@ -108,6 +108,138 @@
       }
     });
 
+    const territorioGeoJson = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "M0MTQ",
+      "properties": {
+        "name": "Territorio 10",
+        "opacity": 1,
+        "weight": 5
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            7.708885,
+            45.067978
+          ],
+          [
+            7.715101,
+            45.06888
+          ],
+          [
+            7.715262,
+            45.068381
+          ],
+          [
+            7.715541,
+            45.068032
+          ],
+          [
+            7.71604,
+            45.067415
+          ],
+          [
+            7.7167,
+            45.066579
+          ],
+          [
+            7.717124,
+            45.065969
+          ],
+          [
+            7.717816,
+            45.066227
+          ],
+          [
+            7.718562,
+            45.066348
+          ],
+          [
+            7.719265,
+            45.066435
+          ],
+          [
+            7.719356,
+            45.06648
+          ],
+          [
+            7.71892,
+            45.066057
+          ],
+          [
+            7.717696,
+            45.064864
+          ],
+          [
+            7.71596,
+            45.064485
+          ],
+          [
+            7.713969,
+            45.063709
+          ],
+          [
+            7.713454,
+            45.063921
+          ],
+          [
+            7.713154,
+            45.064008
+          ],
+          [
+            7.712789,
+            45.06408
+          ],
+          [
+            7.712462,
+            45.064053
+          ],
+          [
+            7.712247,
+            45.064061
+          ],
+          [
+            7.711909,
+            45.064439
+          ],
+          [
+            7.711694,
+            45.064379
+          ],
+          [
+            7.71082,
+            45.065299
+          ],
+          [
+            7.709988,
+            45.066207
+          ],
+          [
+            7.709098,
+            45.067214
+          ],
+          [
+            7.708792,
+            45.067498
+          ],
+          [
+            7.708572,
+            45.067918
+          ],
+          [
+            7.708873,
+            45.067978
+          ]
+        ]
+      }
+    }
+  ]
+};
+
     // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
     const PITCH_2D = 0;
     const PITCH_3D = 60;
@@ -116,77 +248,6 @@
     function getTargetPitch() {
       return is3DMode ? PITCH_3D : PITCH_2D;
     }
-
-    // Dati GeoJSON del confine "Territorio 10" estratti dal file uMap
-    const territorio10GeoJSON = {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          id: 'M0MTQ',
-          properties: {
-            name: 'Territorio 10',
-            opacity: 1,
-            weight: 5
-          },
-          geometry: {
-            type: 'LineString',
-            coordinates: [
-              [7.708885, 45.067978],
-              [7.715101, 45.06888],
-              [7.715262, 45.068381],
-              [7.715541, 45.068032],
-              [7.71604, 45.067415],
-              [7.7167, 45.066579],
-              [7.717124, 45.065969],
-              [7.717816, 45.066227],
-              [7.718562, 45.066348],
-              [7.719265, 45.066435],
-              [7.719356, 45.06648],
-              [7.71892, 45.066057],
-              [7.717696, 45.064864],
-              [7.71596, 45.064485],
-              [7.713969, 45.063709],
-              [7.713454, 45.063921],
-              [7.713154, 45.064008],
-              [7.712789, 45.06408],
-              [7.712462, 45.064053],
-              [7.712247, 45.064061],
-              [7.711909, 45.064439],
-              [7.711694, 45.064379],
-              [7.71082, 45.065299],
-              [7.709988, 45.066207],
-              [7.709098, 45.067214],
-              [7.708792, 45.067498],
-              [7.708572, 45.067918],
-              [7.708873, 45.067978]
-            ]
-          }
-        }
-      ]
-    };
-
-    function getGeoJSONBounds(geojson) {
-      const bounds = new maplibregl.LngLatBounds();
-      geojson.features.forEach((feature) => {
-        const geom = feature.geometry;
-        if (!geom) return;
-        if (geom.type === 'Point') {
-          bounds.extend(geom.coordinates);
-        } else if (geom.type === 'LineString' || geom.type === 'MultiPoint') {
-          geom.coordinates.forEach((coord) => bounds.extend(coord));
-        } else if (geom.type === 'Polygon' || geom.type === 'MultiLineString') {
-          geom.coordinates.forEach((ring) => ring.forEach((coord) => bounds.extend(coord)));
-        } else if (geom.type === 'MultiPolygon') {
-          geom.coordinates.forEach((poly) =>
-            poly.forEach((ring) => ring.forEach((coord) => bounds.extend(coord)))
-          );
-        }
-      });
-      return bounds;
-    }
-
-    const territoryBounds = getGeoJSONBounds(territorio10GeoJSON);
 
     const map = new maplibregl.Map({
       container: 'map',
@@ -210,8 +271,7 @@
           }
         ]
       },
-      // Centro e zoom presi dal file uMap (Territorio 10), poi adattati al perimetro in fitBounds
-      center: [7.713741304584647, 45.06665812656612],
+      center: [7.713741304584647,45.06665812656612],
       zoom: 16,
       pitch: PITCH_2D
     });
@@ -460,40 +520,59 @@
       }
     });
 
+    // Calcola automaticamente l'inquadratura del GeoJSON
+    function fitGeoJsonBounds(geojson) {
+      const bounds = new maplibregl.LngLatBounds();
+      function extendCoords(coords) {
+        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+          bounds.extend(coords);
+        } else if (Array.isArray(coords)) {
+          coords.forEach(extendCoords);
+        }
+      }
+      if (geojson && Array.isArray(geojson.features)) {
+        geojson.features.forEach((f) => {
+          if (f.geometry && f.geometry.coordinates) {
+            extendCoords(f.geometry.coordinates);
+          }
+        });
+      }
+      if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, { padding: 40, duration: 0 });
+      }
+    }
+
     map.on('load', () => {
-      // Aggiunge la sorgente dati e il layer grafico del confine Territorio 10
-      map.addSource('territorio-10', {
+      map.addSource('territorio-source', {
         type: 'geojson',
-        data: territorio10GeoJSON
+        data: territorioGeoJson
       });
 
+      // Riempimento leggero per eventuali Poligoni nel GeoJSON
       map.addLayer({
-        id: 'territorio-10-line',
-        type: 'line',
-        source: 'territorio-10',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
+        id: 'territorio-fill-layer',
+        type: 'fill',
+        source: 'territorio-source',
+        filter: ['==', ['geometry-type'], 'Polygon'],
         paint: {
-          'line-color': '#0066ff',
-          'line-width': 5,
-          'line-opacity': 1
+          'fill-color': '#0066ff',
+          'fill-opacity': 0.15
         }
       });
 
-      if (!territoryBounds.isEmpty()) {
-        isProgrammaticMove = true;
-        map.fitBounds(territoryBounds, {
-          padding: 110,
-          maxZoom: 15,
-          duration: 0
-        });
-        map.once('moveend', () => {
-          isProgrammaticMove = false;
-        });
-      }
+      // Bordo blu per LineString e Poligoni
+      map.addLayer({
+        id: 'territorio-confine-layer',
+        type: 'line',
+        source: 'territorio-source',
+        paint: {
+          'line-color': '#0066ff',
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
+      });
 
+      fitGeoJsonBounds(territorioGeoJson);
       startBackgroundTracking();
     });
   </script>
