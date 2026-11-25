@@ -10,12 +10,12 @@
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Territorio A116 - Torino Regio Parco</title>
   <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5/dist/maplibre-gl.js"></script>
   <style>
-    html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; }
+    html, body, #map { margin: 0; padding: 0; width: 100%; height: 100%; touch-action: none; }
 
     .nav-marker-wrapper {
       width: 36px;
@@ -76,6 +76,40 @@
       color: #ffffff;
     }
 
+    /* Controlli zoom + / - compatibili con Course-Up */
+    .zoom-step-group {
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      border-radius: 4px;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .zoom-step-btn {
+      width: 32px;
+      height: 32px;
+      background: #ffffff;
+      border: none;
+      cursor: pointer;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1;
+      color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .zoom-step-btn + .zoom-step-btn {
+      border-top: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    .zoom-step-btn:active {
+      background: #e2e8f0;
+    }
+
     #err-box {
       display: none;
       position: fixed;
@@ -108,7 +142,17 @@
       }
     });
 
-    const territorioGeoJson = {
+    // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
+    const PITCH_2D = 0;
+    const PITCH_3D = 60;
+    const ZOOM_STEP = 0.8;
+    let is3DMode = false;
+
+    function getTargetPitch() {
+      return is3DMode ? PITCH_3D : PITCH_2D;
+    }
+
+    const confineGeoJSON = {
   "type": "FeatureCollection",
   "features": [
     {
@@ -194,13 +238,49 @@
   ]
 };
 
-    // Impostazioni vista: 2D (pitch 0) o 3D (pitch 60)
-    const PITCH_2D = 0;
-    const PITCH_3D = 60;
-    let is3DMode = false;
+    function extractCoords(geojson) {
+      const coords = [];
+      function walk(node) {
+        if (!node) return;
+        if (Array.isArray(node)) {
+          if (node.length >= 2 && typeof node[0] === 'number' && typeof node[1] === 'number') {
+            coords.push([node[0], node[1]]);
+          } else {
+            for (const item of node) walk(item);
+          }
+        } else if (typeof node === 'object') {
+          if (node.type === 'FeatureCollection' && Array.isArray(node.features)) {
+            node.features.forEach(walk);
+          } else if (node.type === 'Feature') {
+            walk(node.geometry);
+          } else if (node.coordinates) {
+            walk(node.coordinates);
+          }
+        }
+      }
+      walk(geojson);
+      return coords;
+    }
 
-    function getTargetPitch() {
-      return is3DMode ? PITCH_3D : PITCH_2D;
+    function fitBoundsToGeoJSON(mapInstance, geojson, animate = false) {
+      const points = extractCoords(geojson);
+      if (!points.length) return;
+
+      const bounds = new maplibregl.LngLatBounds(points[0], points[0]);
+      for (const pt of points) {
+        bounds.extend(pt);
+      }
+
+      const isMobile = window.innerWidth < 768;
+      const padding = isMobile
+        ? { top: 65, bottom: 55, left: 35, right: 35 }
+        : { top: 75, bottom: 65, left: 75, right: 95 };
+
+      mapInstance.fitBounds(bounds, {
+        padding,
+        maxZoom: 18,
+        duration: animate ? 500 : 0
+      });
     }
 
     const map = new maplibregl.Map({
@@ -230,21 +310,48 @@
       pitch: PITCH_2D
     });
 
-    map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
+    map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: false }), 'top-right');
 
-    // Stato Course-Up disattivato di default all'apertura
+    // Stato Course-Up e gestione interazioni touch/camera
     let courseUpEnabled = false;
     let navMarker = null;
     let lastHeading = 0;
     let lastCoords = null;
     let isProgrammaticMove = false;
+    let moveResetTimer = null;
+    let isUserPinchingOrZooming = false;
+    let activeTouchCount = 0;
 
     function moveCameraSafe(options) {
+      if (isUserPinchingOrZooming) return;
       isProgrammaticMove = true;
+      if (moveResetTimer) clearTimeout(moveResetTimer);
       map.easeTo(options);
       map.once('moveend', () => {
-        isProgrammaticMove = false;
+        moveResetTimer = setTimeout(() => {
+          isProgrammaticMove = false;
+        }, 60);
       });
+    }
+
+    function stepZoom(delta) {
+      const currentZoom = map.getZoom();
+      const minZoom = map.getMinZoom();
+      const maxZoom = map.getMaxZoom();
+      const nextZoom = Math.min(maxZoom, Math.max(minZoom, currentZoom + delta));
+
+      const cameraOptions = {
+        zoom: nextZoom,
+        pitch: getTargetPitch(),
+        duration: 220
+      };
+
+      if (courseUpEnabled) {
+        cameraOptions.center = lastCoords || map.getCenter();
+        cameraOptions.bearing = lastHeading;
+      }
+
+      moveCameraSafe(cameraOptions);
     }
 
     async function requestCompassPermissionIfNeeded() {
@@ -257,6 +364,48 @@
         } catch (_) {}
       }
     }
+
+    // Controllo dedicato per zoom + / - anche con Course-Up attivo
+    class ZoomStepControl {
+      onAdd(map) {
+        this._map = map;
+        this._container = document.createElement('div');
+        this._container.className = 'maplibregl-ctrl zoom-step-group';
+
+        const plusBtn = document.createElement('button');
+        plusBtn.type = 'button';
+        plusBtn.className = 'zoom-step-btn';
+        plusBtn.textContent = '+';
+        plusBtn.title = 'Zoom avanti';
+        plusBtn.setAttribute('aria-label', 'Zoom avanti');
+        plusBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          stepZoom(ZOOM_STEP);
+        });
+
+        const minusBtn = document.createElement('button');
+        minusBtn.type = 'button';
+        minusBtn.className = 'zoom-step-btn';
+        minusBtn.textContent = '−';
+        minusBtn.title = 'Zoom indietro';
+        minusBtn.setAttribute('aria-label', 'Zoom indietro');
+        minusBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          stepZoom(-ZOOM_STEP);
+        });
+
+        this._container.appendChild(plusBtn);
+        this._container.appendChild(minusBtn);
+        return this._container;
+      }
+
+      onRemove() {
+        this._container.parentNode.removeChild(this._container);
+        this._map = undefined;
+      }
+    }
+
+    map.addControl(new ZoomStepControl(), 'top-right');
 
     // Controllo per passare da 2D a 3D mantenendo lo stato Course-Up
     class ViewModeControl {
@@ -368,9 +517,50 @@
     const courseUpCtrl = new CourseUpControl();
     map.addControl(courseUpCtrl, 'top-right');
 
-    // Se l'utente sposta o ruota manualmente la mappa con le dita, mette in pausa Course-Up
-    map.on('dragstart', () => {
-      if (!isProgrammaticMove && courseUpEnabled) {
+    // Traccia il numero di dita sullo schermo per distinguere pinch/zoom da pan manuale
+    const mapContainer = map.getCanvasContainer();
+    mapContainer.addEventListener('touchstart', (ev) => {
+      activeTouchCount = ev.touches.length;
+      if (activeTouchCount >= 2) {
+        isUserPinchingOrZooming = true;
+      }
+    }, { passive: true });
+
+    mapContainer.addEventListener('touchmove', (ev) => {
+      activeTouchCount = ev.touches.length;
+      if (activeTouchCount >= 2) {
+        isUserPinchingOrZooming = true;
+      }
+    }, { passive: true });
+
+    mapContainer.addEventListener('touchend', (ev) => {
+      activeTouchCount = ev.touches.length;
+      if (activeTouchCount < 2) {
+        setTimeout(() => {
+          isUserPinchingOrZooming = false;
+        }, 120);
+      }
+    }, { passive: true });
+
+    map.on('zoomstart', (ev) => {
+      if (!isProgrammaticMove && ev && ev.originalEvent) {
+        isUserPinchingOrZooming = true;
+      }
+    });
+
+    map.on('zoomend', () => {
+      if (activeTouchCount < 2) {
+        setTimeout(() => {
+          isUserPinchingOrZooming = false;
+        }, 120);
+      }
+    });
+
+    // Se l'utente sposta o ruota manualmente la mappa con un dito, mette in pausa Course-Up
+    map.on('dragstart', (ev) => {
+      if (isProgrammaticMove || !courseUpEnabled) return;
+      if (isUserPinchingOrZooming || activeTouchCount >= 2) return;
+      if (ev && ev.originalEvent) {
         courseUpEnabled = false;
         courseUpCtrl.updateUI();
       }
@@ -427,11 +617,12 @@
         navMarker.setRotation(lastHeading);
       }
 
-      // Sposta la camera solo se l'utente ha attivato Course-Up
-      if (courseUpEnabled) {
+      // Sposta la camera solo se l'utente ha attivato Course-Up e non sta facendo pinch-to-zoom con le dita
+      if (courseUpEnabled && !isUserPinchingOrZooming) {
         moveCameraSafe({
           center: lastCoords,
           bearing: lastHeading,
+          zoom: map.getZoom(),
           pitch: getTargetPitch(),
           duration: 300,
           easing: (t) => t
@@ -474,59 +665,31 @@
       }
     });
 
-    // Calcola automaticamente l'inquadratura del GeoJSON
-    function fitGeoJsonBounds(geojson) {
-      const bounds = new maplibregl.LngLatBounds();
-      function extendCoords(coords) {
-        if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-          bounds.extend(coords);
-        } else if (Array.isArray(coords)) {
-          coords.forEach(extendCoords);
-        }
-      }
-      if (geojson && Array.isArray(geojson.features)) {
-        geojson.features.forEach((f) => {
-          if (f.geometry && f.geometry.coordinates) {
-            extendCoords(f.geometry.coordinates);
+    map.on('load', () => {
+      if (confineGeoJSON) {
+        map.addSource('confine-source', {
+          type: 'geojson',
+          data: confineGeoJSON
+        });
+
+        map.addLayer({
+          id: 'confine-line',
+          type: 'line',
+          source: 'confine-source',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#0066ff',
+            'line-width': 5,
+            'line-opacity': 1
           }
         });
+
+        fitBoundsToGeoJSON(map, confineGeoJSON, false);
       }
-      if (!bounds.isEmpty()) {
-        map.fitBounds(bounds, { padding: 40, duration: 0 });
-      }
-    }
 
-    map.on('load', () => {
-      map.addSource('territorio-source', {
-        type: 'geojson',
-        data: territorioGeoJson
-      });
-
-      // Riempimento leggero per eventuali Poligoni nel GeoJSON
-      map.addLayer({
-        id: 'territorio-fill-layer',
-        type: 'fill',
-        source: 'territorio-source',
-        filter: ['==', ['geometry-type'], 'Polygon'],
-        paint: {
-          'fill-color': '#0066ff',
-          'fill-opacity': 0.15
-        }
-      });
-
-      // Bordo blu per LineString e Poligoni
-      map.addLayer({
-        id: 'territorio-confine-layer',
-        type: 'line',
-        source: 'territorio-source',
-        paint: {
-          'line-color': '#0066ff',
-          'line-width': 4,
-          'line-opacity': 0.9
-        }
-      });
-
-      fitGeoJsonBounds(territorioGeoJson);
       startBackgroundTracking();
     });
   </script>
