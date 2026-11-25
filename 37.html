@@ -152,44 +152,10 @@
       return is3DMode ? PITCH_3D : PITCH_2D;
     }
 
-    // GeoJSON dei confini (Territorio 36 e Territorio 37)
+    // GeoJSON del confine Territorio 37 - Torino Bologna
     const confineGeoJSON = {
       type: "FeatureCollection",
       features: [
-        {
-          type: "Feature",
-          id: "AwNTA",
-          properties: {
-            name: "Territorio 36",
-            _umap_options: {
-              opacity: 1,
-              weight: 5
-            }
-          },
-          geometry: {
-            type: "LineString",
-            coordinates: [
-              [7.699165, 45.096444],
-              [7.701881, 45.095339],
-              [7.704295, 45.09437],
-              [7.704036, 45.093866],
-              [7.703596, 45.093203],
-              [7.703446, 45.093241],
-              [7.703268, 45.093226],
-              [7.703166, 45.093181],
-              [7.703027, 45.09312],
-              [7.702893, 45.092942],
-              [7.702866, 45.092893],
-              [7.700927, 45.092847],
-              [7.699315, 45.092805],
-              [7.697523, 45.092752],
-              [7.696685, 45.092723],
-              [7.697705, 45.094189],
-              [7.698311, 45.095157],
-              [7.699168, 45.096435]
-            ]
-          }
-        },
         {
           type: "Feature",
           id: "g4OTM",
@@ -306,8 +272,8 @@
           }
         ]
       },
-      center: [7.703629766362364, 45.08973518682048],
-      zoom: 16,
+      center: [7.6869, 45.0703],
+      zoom: 13,
       pitch: PITCH_2D
     });
 
