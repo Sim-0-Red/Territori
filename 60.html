@@ -390,3 +390,252 @@
           this._btn.classList.add('is-3d');
         } else {
           this._btn.textContent = '2D';
+          this._btn.classList.remove('is-3d');
+        }
+      }
+
+      onRemove() {
+        this._container.parentNode.removeChild(this._container);
+        this._map = undefined;
+      }
+    }
+
+    const viewModeCtrl = new ViewModeControl();
+    map.addControl(viewModeCtrl, 'top-right');
+
+    // Controllo personalizzato per attivare/disattivare Course-Up
+    class CourseUpControl {
+      onAdd(map) {
+        this._map = map;
+        this._container = document.createElement('div');
+        this._container.className = 'maplibregl-ctrl';
+
+        this._btn = document.createElement('button');
+        this._btn.type = 'button';
+        this._btn.className = 'course-up-btn';
+        this._btn.innerHTML = '🧭 Course-Up';
+        this._btn.title = 'Attiva/Disattiva rotazione automatica mappa';
+
+        this._btn.addEventListener('click', async () => {
+          courseUpEnabled = !courseUpEnabled;
+          this.updateUI();
+
+          if (courseUpEnabled) {
+            await requestCompassPermissionIfNeeded();
+            if (lastCoords) {
+              moveCameraSafe({
+                center: lastCoords,
+                bearing: lastHeading,
+                pitch: getTargetPitch(),
+                duration: 450
+              });
+            }
+          } else {
+            moveCameraSafe({
+              bearing: 0,
+              pitch: getTargetPitch(),
+              duration: 450
+            });
+          }
+        });
+
+        this._container.appendChild(this._btn);
+        return this._container;
+      }
+
+      updateUI() {
+        if (courseUpEnabled) {
+          this._btn.classList.add('active');
+        } else {
+          this._btn.classList.remove('active');
+        }
+      }
+
+      onRemove() {
+        this._container.parentNode.removeChild(this._container);
+        this._map = undefined;
+      }
+    }
+
+    const courseUpCtrl = new CourseUpControl();
+    map.addControl(courseUpCtrl, 'top-right');
+
+    // Traccia il numero di dita sullo schermo per distinguere pinch/zoom da pan manuale
+    const mapContainer = map.getCanvasContainer();
+    mapContainer.addEventListener('touchstart', (ev) => {
+      activeTouchCount = ev.touches.length;
+      if (activeTouchCount >= 2) {
+        isUserPinchingOrZooming = true;
+      }
+    }, { passive: true });
+
+    mapContainer.addEventListener('touchmove', (ev) => {
+      activeTouchCount = ev.touches.length;
+      if (activeTouchCount >= 2) {
+        isUserPinchingOrZooming = true;
+      }
+    }, { passive: true });
+
+    mapContainer.addEventListener('touchend', (ev) => {
+      activeTouchCount = ev.touches.length;
+      if (activeTouchCount < 2) {
+        setTimeout(() => {
+          isUserPinchingOrZooming = false;
+        }, 120);
+      }
+    }, { passive: true });
+
+    map.on('zoomstart', (ev) => {
+      if (!isProgrammaticMove && ev && ev.originalEvent) {
+        isUserPinchingOrZooming = true;
+      }
+    });
+
+    map.on('zoomend', () => {
+      if (activeTouchCount < 2) {
+        setTimeout(() => {
+          isUserPinchingOrZooming = false;
+        }, 120);
+      }
+    });
+
+    // Se l'utente sposta o ruota manualmente la mappa con un dito, mette in pausa Course-Up
+    map.on('dragstart', (ev) => {
+      if (isProgrammaticMove || !courseUpEnabled) return;
+      if (isUserPinchingOrZooming || activeTouchCount >= 2) return;
+      if (ev && ev.originalEvent) {
+        courseUpEnabled = false;
+        courseUpCtrl.updateUI();
+      }
+    });
+
+    // Crea il triangolino/freccia da navigatore
+    const wrapperEl = document.createElement('div');
+    wrapperEl.className = 'nav-marker-wrapper';
+
+    const arrowEl = document.createElement('div');
+    arrowEl.className = 'nav-arrow';
+    arrowEl.innerHTML = `
+      <svg viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="16,3 27,27 16,21 5,27" fill="#0066ff" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round" />
+      </svg>
+    `;
+    wrapperEl.appendChild(arrowEl);
+
+    // Pulsante mirino GPS manuale (non sposta la mappa finché non lo premi)
+    const geolocate = new maplibregl.GeolocateControl({
+      positionOptions: {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 5000
+      },
+      trackUserLocation: false,
+      showUserLocation: false,
+      showAccuracyCircle: false
+    });
+    map.addControl(geolocate, 'top-right');
+
+    function updateNavigationView(coords, heading) {
+      if (!Array.isArray(coords) || coords.length !== 2) return;
+      const [lon, lat] = coords;
+      if (typeof lon !== 'number' || typeof lat !== 'number' || Number.isNaN(lon) || Number.isNaN(lat)) return;
+
+      lastCoords = [lon, lat];
+
+      if (typeof heading === 'number' && !Number.isNaN(heading)) {
+        lastHeading = ((heading % 360) + 360) % 360;
+      }
+
+      if (!navMarker) {
+        navMarker = new maplibregl.Marker({
+          element: wrapperEl,
+          rotationAlignment: 'map',
+          pitchAlignment: 'map'
+        })
+          .setLngLat(lastCoords)
+          .setRotation(lastHeading)
+          .addTo(map);
+      } else {
+        navMarker.setLngLat(lastCoords);
+        navMarker.setRotation(lastHeading);
+      }
+
+      // Sposta la camera solo se l'utente ha attivato Course-Up e non sta facendo pinch-to-zoom con le dita
+      if (courseUpEnabled && !isUserPinchingOrZooming) {
+        moveCameraSafe({
+          center: lastCoords,
+          bearing: lastHeading,
+          zoom: map.getZoom(),
+          pitch: getTargetPitch(),
+          duration: 300,
+          easing: (t) => t
+        });
+      }
+    }
+
+    geolocate.on('geolocate', (e) => {
+      const { longitude, latitude, heading } = e.coords;
+      updateNavigationView([longitude, latitude], heading);
+    });
+
+    // Tracciamento GPS in background: aggiorna la freccia senza spostare l'inquadratura iniziale
+    function startBackgroundTracking() {
+      if (!('geolocation' in navigator)) return;
+      navigator.geolocation.watchPosition(
+        (pos) => {
+          const { longitude, latitude, heading } = pos.coords;
+          updateNavigationView([longitude, latitude], heading);
+        },
+        () => {},
+        {
+          enableHighAccuracy: true,
+          maximumAge: 5000,
+          timeout: 10000
+        }
+      );
+    }
+
+    window.addEventListener('deviceorientationabsolute', (e) => {
+      if (typeof e.alpha === 'number' && !Number.isNaN(e.alpha) && lastCoords && courseUpEnabled) {
+        const compassHeading = (360 - e.alpha) % 360;
+        updateNavigationView(lastCoords, compassHeading);
+      }
+    });
+
+    window.addEventListener('deviceorientation', (e) => {
+      if (typeof e.webkitCompassHeading === 'number' && !Number.isNaN(e.webkitCompassHeading) && lastCoords && courseUpEnabled) {
+        updateNavigationView(lastCoords, e.webkitCompassHeading);
+      }
+    });
+
+    map.on('load', () => {
+      if (confineGeoJSON) {
+        map.addSource('confine-source', {
+          type: 'geojson',
+          data: confineGeoJSON
+        });
+
+        map.addLayer({
+          id: 'confine-line',
+          type: 'line',
+          source: 'confine-source',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#0066ff',
+            'line-width': 5,
+            'line-opacity': 1
+          }
+        });
+
+        fitBoundsToGeoJSON(map, confineGeoJSON, false);
+      }
+
+      startBackgroundTracking();
+    });
+  </script>
+</body>
+</html>
+```[cite: 6]
