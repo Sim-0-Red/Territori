@@ -152,8 +152,31 @@
       return is3DMode ? PITCH_3D : PITCH_2D;
     }
 
-    // Inserisci qui i dati GeoJSON del confine quando disponibili
-    const confineGeoJSON = null;
+    // Dati GeoJSON del confine - Territorio 55
+    const confineGeoJSON = {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "geometry": {
+            "coordinates": [
+              [7.694041, 45.09853], [7.695742, 45.097834], [7.696923, 45.097338],
+              [7.696649, 45.096895], [7.69637, 45.096487], [7.696257, 45.096381],
+              [7.695366, 45.09668], [7.694551, 45.096744], [7.693923, 45.096748],
+              [7.694045, 45.098533]
+            ],
+            "type": "LineString"
+          },
+          "properties": {
+            "_umap_options": {
+              "opacity": 1,
+              "weight": 5
+            }
+          },
+          "id": "MxNTE"
+        }
+      ]
+    };
 
     function extractCoords(geojson) {
       const coords = [];
